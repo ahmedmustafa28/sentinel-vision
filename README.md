@@ -1,6 +1,6 @@
-# SentinelCV: Smart AI CCTV Security System
+# SentinelVision: Smart AI CCTV Security System
 
-SentinelCV is a smart security camera system that uses Artificial Intelligence (AI) to watch your camera streams, detect events, and keep your premises safe. 
+SentinelVision is a smart security camera system that uses Artificial Intelligence (AI) to watch your camera streams, detect events, and keep your premises safe. 
 
 Unlike standard security cameras, SentinelCV automatically recognizes people, tracks if important items go missing, monitors restricted areas, and sends you instant email alerts when critical events happen.
 
@@ -64,8 +64,8 @@ Unlike standard security cameras, SentinelCV automatically recognizes people, tr
 ### 1. Clone the Project
 Open Git Bash or your terminal and run:
 ```bash
-git clone https://github.com/ahmedmustafa28/sentinel-cv-surveillance.git
-cd sentinel-cv-surveillance
+git clone https://github.com/ahmedmustafa28/sentinel-vision.git
+cd sentinel-vision
 ```
 
 ### 2. Configure Settings (`.env`)
