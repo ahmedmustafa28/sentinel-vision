@@ -1,0 +1,108 @@
+{% extends "components/layout.html" %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h1 class="h3 mb-1">Notifications Log</h1>
+    <p class="text-secondary mb-0">Review critical surveillance alerts, intrusion detections, and email status.</p>
+  </div>
+  {% set unread_cnt = get_unread_notifications_count() %}
+  {% if unread_cnt > 0 %}
+  <form method="post" action="/notifications/read_all">
+    <button type="submit" class="btn btn-outline-primary">Mark All as Read</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-12 col-md-6 col-lg-3">
+    <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid var(--cctv-primary) !important;">
+      <div class="card-body">
+        <p class="text-secondary small mb-2">Unread Alerts</p>
+        <h2 class="display-6 mb-0">{{ unread_cnt }}</h2>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body p-0">
+    <div class="d-flex border-bottom px-3 py-2 bg-light rounded-top gap-2 align-items-center">
+      <span class="text-secondary small fw-semibold me-auto">Filter Alerts:</span>
+      <a href="/notifications?filter_type=all" class="btn btn-sm {% if filter_type == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">All</a>
+      <a href="/notifications?filter_type=unread" class="btn btn-sm {% if filter_type == 'unread' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Unread</a>
+      <a href="/notifications?filter_type=read" class="btn btn-sm {% if filter_type == 'read' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Read</a>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Type</th>
+            <th>Message</th>
+            <th>Email Status</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for n in notifications %}
+          <tr class="{% if not n.is_read %}fw-semibold table-light{% endif %}" style="transition: background-color 0.2s;">
+            <td class="text-nowrap small text-secondary" style="width: 15%;">{{ n.timestamp }}</td>
+            <td style="width: 15%;">
+              {% if n.notification_type == 'restricted_area_entered' %}
+              <span class="badge text-bg-danger">Intrusion</span>
+              {% elif n.notification_type == 'unknown_person_detected' %}
+              <span class="badge text-bg-dark">Unknown Person</span>
+              {% elif n.notification_type == 'object_disappeared' %}
+              <span class="badge text-bg-warning">Object Removed</span>
+              {% else %}
+              <span class="badge text-bg-secondary">{{ n.notification_type }}</span>
+              {% endif %}
+            </td>
+            <td>{{ n.message }}</td>
+            <td style="width: 15%;">
+              {% if n.email_sent %}
+              <span class="badge text-bg-success" title="Sent to: {{ n.email_recipient }}">Email Sent</span>
+              {% elif n.email_recipient %}
+              <span class="badge text-bg-secondary" title="Dispatch failed to: {{ n.email_recipient }}">Dispatch Failed</span>
+              {% else %}
+              <span class="text-secondary small">-</span>
+              {% endif %}
+            </td>
+            <td class="text-end" style="width: 10%;">
+              {% if not n.is_read %}
+              <form method="post" action="/notifications/{{ n.id }}/read">
+                <button type="submit" class="btn btn-sm btn-outline-success">Mark Read</button>
+              </form>
+              {% else %}
+              <span class="text-success small"><i class="bi bi-check-lg">Read</i></span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5" class="text-center text-secondary py-5">
+              <span class="d-block display-6 text-muted mb-2">🔔</span>
+              No notifications found matching your selection.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mt-3 border-top pt-3">
+      <span class="text-secondary small">Page {{ page }} of {{ total_pages }}</span>
+      <div class="btn-group">
+        <a class="btn btn-outline-secondary {% if page <= 1 %}disabled{% endif %}" href="/notifications?page={{ page - 1 }}&filter_type={{ filter_type }}">Previous</a>
+        <a class="btn btn-outline-secondary {% if page >= total_pages %}disabled{% endif %}" href="/notifications?page={{ page + 1 }}&filter_type={{ filter_type }}">Next</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

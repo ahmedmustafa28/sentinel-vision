@@ -1,0 +1,81 @@
+{% extends "components/layout.html" %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h1 class="h3 mb-1">Live Feed</h1>
+    <p class="text-secondary mb-0">Real-time monitoring with MJPEG streaming.</p>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <form class="row g-3 align-items-end" id="streamForm">
+      <div class="col-12 col-md-3">
+        <label class="form-label">Camera ID</label>
+        <input class="form-control" id="cameraId" type="number" min="1" placeholder="optional" value="{{ camera_id if camera_id is not none else '' }}" />
+      </div>
+      <div class="col-12 col-md-7">
+        <label class="form-label">Source</label>
+        <input class="form-control" id="source" type="text" placeholder="0 or rtsp://..." value="{{ source }}" />
+      </div>
+      <div class="col-12 col-md-2 d-grid">
+        <button class="btn btn-primary" type="submit">Load</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm overflow-hidden">
+  <div class="card-body p-0 stream-panel">
+    <img id="streamView" src="" alt="Live video stream" class="img-fluid w-100" />
+  </div>
+  <div class="card-footer bg-white">
+    <span class="text-secondary small">MJPEG endpoint:</span>
+    <a id="endpointLink" href="#" class="small ms-1">/video_feed</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    const form = document.getElementById("streamForm");
+    const cameraIdInput = document.getElementById("cameraId");
+    const sourceInput = document.getElementById("source");
+    const streamView = document.getElementById("streamView");
+    const endpointLink = document.getElementById("endpointLink");
+
+    function buildUrl() {
+      const params = new URLSearchParams();
+      const cameraId = cameraIdInput.value.trim();
+      const source = sourceInput.value.trim();
+
+      if (cameraId) {
+        params.set("camera_id", cameraId);
+      }
+      if (source) {
+        params.set("source", source);
+      }
+
+      const query = params.toString();
+      return query ? `/video_feed?${query}` : "/video_feed";
+    }
+
+    function loadStream() {
+      const url = buildUrl();
+      const separator = url.includes("?") ? "&" : "?";
+      streamView.src = `${url}${separator}t=${Date.now()}`;
+      endpointLink.href = url;
+      endpointLink.textContent = url;
+    }
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      loadStream();
+    });
+
+    loadStream();
+  })();
+</script>
+{% endblock %}

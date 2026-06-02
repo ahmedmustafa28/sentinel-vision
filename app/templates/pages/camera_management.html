@@ -1,0 +1,112 @@
+{% extends "components/layout.html" %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h1 class="h3 mb-1">Camera Management</h1>
+    <p class="text-secondary mb-0">Add, monitor, and control connected cameras.</p>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-xl-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-0 pt-3">
+        <h3 class="h5 mb-0">Add New Camera</h3>
+      </div>
+      <div class="card-body">
+        <form method="post" action="/cameras/add" class="vstack gap-3">
+          <div>
+            <label class="form-label">Camera Name</label>
+            <input class="form-control" type="text" name="name" placeholder="Front Door Cam" required />
+          </div>
+          <div>
+            <label class="form-label">Source URL / Index</label>
+            <input class="form-control" type="text" name="source_url" placeholder="0 or rtsp://..." required />
+          </div>
+          <div>
+            <label class="form-label">Location</label>
+            <input class="form-control" type="text" name="location" placeholder="Ground Floor" />
+          </div>
+          <div class="form-check form-switch my-2">
+            <input class="form-check-input" type="checkbox" name="is_restricted" id="isRestrictedInput" />
+            <label class="form-check-label text-secondary small" for="isRestrictedInput">Restricted Area (Generates entry alerts)</label>
+          </div>
+          <button class="btn btn-primary w-100" type="submit">Save Camera</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-0 pt-3">
+        <h3 class="h5 mb-0">Registered Cameras</h3>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Source</th>
+                <th>Location</th>
+                <th>Area Status</th>
+                <th>Status</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for camera in cameras %}
+              <tr>
+                <td>#{{ camera.id }}</td>
+                <td>{{ camera.name }}</td>
+                <td class="small text-break">{{ camera.source_url }}</td>
+                <td>{{ camera.location or "-" }}</td>
+                <td>
+                  {% if camera.is_restricted %}
+                  <span class="badge text-bg-danger">Restricted</span>
+                  {% else %}
+                  <span class="badge text-bg-secondary">Normal</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if camera.is_active %}
+                  <span class="badge text-bg-success">Active</span>
+                  {% else %}
+                  <span class="badge text-bg-secondary">Inactive</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="d-flex gap-2 justify-content-end">
+                    <a class="btn btn-sm btn-outline-primary" href="/live?camera_id={{ camera.id }}">View</a>
+                    <form method="post" action="/cameras/{{ camera.id }}/toggle">
+                      <button class="btn btn-sm btn-outline-warning" type="submit">
+                        {% if camera.is_active %}Disable{% else %}Enable{% endif %}
+                      </button>
+                    </form>
+                    <form method="post" action="/cameras/{{ camera.id }}/toggle_restricted">
+                      <button class="btn btn-sm btn-outline-info" type="submit">
+                        {% if camera.is_restricted %}Normal{% else %}Restrict{% endif %}
+                      </button>
+                    </form>
+                    <form method="post" action="/cameras/{{ camera.id }}/delete" onsubmit="return confirm('Delete this camera?');">
+                      <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="6" class="text-center text-secondary py-4">No cameras configured yet.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

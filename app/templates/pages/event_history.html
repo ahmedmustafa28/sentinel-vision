@@ -1,0 +1,76 @@
+{% extends "components/layout.html" %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h1 class="h3 mb-1">Event History</h1>
+    <p class="text-secondary mb-0">Filter and inspect surveillance events.</p>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <form class="row g-3 align-items-end" method="get" action="/events">
+      <div class="col-12 col-md-4">
+        <label class="form-label">Camera</label>
+        <select class="form-select" name="camera_id">
+          <option value="">All cameras</option>
+          {% for cam in cameras %}
+          <option value="{{ cam.id }}" {% if camera_id == cam.id %}selected{% endif %}>#{{ cam.id }} - {{ cam.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">Event Type</label>
+        <input type="text" class="form-control" name="event_type" value="{{ event_type }}" placeholder="person_detected" />
+      </div>
+      <div class="col-12 col-md-4 d-grid">
+        <button type="submit" class="btn btn-primary">Apply Filters</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Timestamp</th>
+            <th>Event Type</th>
+            <th>Description</th>
+            <th>Camera</th>
+            <th>Image</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for event in events %}
+          <tr>
+            <td>{{ event.id }}</td>
+            <td class="text-nowrap small">{{ event.timestamp }}</td>
+            <td><span class="badge text-bg-dark">{{ event.event_type }}</span></td>
+            <td>{{ event.description or "-" }}</td>
+            <td>#{{ event.camera_id }}</td>
+            <td class="small">{{ event.image_path or "-" }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-secondary py-4">No events found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mt-3">
+      <span class="text-secondary small">Page {{ page }} of {{ total_pages }}</span>
+      <div class="btn-group">
+        <a class="btn btn-outline-secondary {% if page <= 1 %}disabled{% endif %}" href="/events?page={{ page - 1 }}{% if camera_id %}&camera_id={{ camera_id }}{% endif %}{% if event_type %}&event_type={{ event_type }}{% endif %}">Previous</a>
+        <a class="btn btn-outline-secondary {% if page >= total_pages %}disabled{% endif %}" href="/events?page={{ page + 1 }}{% if camera_id %}&camera_id={{ camera_id }}{% endif %}{% if event_type %}&event_type={{ event_type }}{% endif %}">Next</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

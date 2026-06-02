@@ -1,0 +1,59 @@
+:root {
+  --cctv-bg: #f5f7fb;
+  --cctv-primary: #0b5ed7;
+  --cctv-primary-dark: #084298;
+  --cctv-nav: #0f172a;
+  --cctv-card: #ffffff;
+}
+
+body {
+  background: radial-gradient(circle at 20% 0%, #e9efff, transparent 35%), var(--cctv-bg);
+  color: #1f2937;
+}
+
+.cctv-navbar {
+  background: linear-gradient(90deg, #0f172a 0%, #1e293b 60%, #1f2d4f 100%);
+}
+
+.navbar-brand {
+  letter-spacing: 0.2px;
+}
+
+.card {
+  background: var(--cctv-card);
+  border-radius: 14px;
+}
+
+.dashboard-kpi {
+  border-left: 4px solid rgba(11, 94, 215, 0.85);
+}
+
+.stream-panel {
+  background: #020617;
+  min-height: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.table > :not(caption) > * > * {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.btn-primary {
+  background-color: var(--cctv-primary);
+  border-color: var(--cctv-primary);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--cctv-primary-dark);
+  border-color: var(--cctv-primary-dark);
+}
+
+@media (max-width: 768px) {
+  .stream-panel {
+    min-height: 240px;
+  }
+}

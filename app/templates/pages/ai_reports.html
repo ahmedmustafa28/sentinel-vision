@@ -1,0 +1,121 @@
+{% extends "components/layout.html" %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h1 class="h3 mb-1">AI Reports</h1>
+    <p class="text-secondary mb-0">Operational insights and generated report assets.</p>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-12 col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <p class="text-secondary small mb-2">Total Events</p>
+        <h2 class="display-6 mb-0">{{ total_events }}</h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <p class="text-secondary small mb-2">Event Types</p>
+        <h2 class="display-6 mb-0">{{ event_breakdown|length }}</h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <p class="text-secondary small mb-2">Generated Files</p>
+        <h2 class="display-6 mb-0">{{ report_files|length }}</h2>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-xl-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white border-0 pt-3">
+        <h3 class="h5 mb-0">Event Breakdown</h3>
+      </div>
+      <div class="card-body">
+        {% if event_breakdown %}
+        <ul class="list-group list-group-flush">
+          {% for event_type, count in event_breakdown %}
+          <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+            <span>{{ event_type }}</span>
+            <span class="badge text-bg-primary rounded-pill">{{ count }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-secondary mb-0">No event analytics available.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white border-0 pt-3">
+        <h3 class="h5 mb-0">Report Files</h3>
+      </div>
+      <div class="card-body">
+        {% if report_files %}
+        <ul class="list-group list-group-flush">
+          {% for report in report_files %}
+          <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+            <span class="text-break">{{ report.name }}</span>
+            <span class="text-secondary small">{{ report.stat().st_size }} bytes</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-secondary mb-0">No generated report files yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-0 pt-3">
+        <h3 class="h5 mb-0">Latest Event Snapshots</h3>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped align-middle">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Timestamp</th>
+                <th>Type</th>
+                <th>Description</th>
+                <th>Camera</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for event in latest_events %}
+              <tr>
+                <td>{{ event.id }}</td>
+                <td class="text-nowrap small">{{ event.timestamp }}</td>
+                <td><span class="badge text-bg-dark">{{ event.event_type }}</span></td>
+                <td>{{ event.description or "-" }}</td>
+                <td>#{{ event.camera_id }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="5" class="text-center text-secondary py-4">No events available for reporting.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
