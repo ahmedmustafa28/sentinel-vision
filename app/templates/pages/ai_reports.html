@@ -6,6 +6,15 @@
     <h1 class="h3 mb-1">AI Reports</h1>
     <p class="text-secondary mb-0">Operational insights and generated report assets.</p>
   </div>
+  <form method="post" action="/reports/generate" class="mb-0">
+    <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cpu" viewBox="0 0 16 16">
+        <path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3z"/>
+        <path d="M5 5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-.5.5h-5a.5.5 0 0 1-.5-.5zm1 .5v4h4v-4z"/>
+      </svg>
+      Generate AI Report
+    </button>
+  </form>
 </div>
 
 <div class="row g-4 mb-4">
@@ -68,8 +77,17 @@
         <ul class="list-group list-group-flush">
           {% for report in report_files %}
           <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-            <span class="text-break">{{ report.name }}</span>
-            <span class="text-secondary small">{{ report.stat().st_size }} bytes</span>
+            <div class="d-flex flex-column">
+              <span class="text-break fw-semibold">{{ report.name }}</span>
+              <span class="text-secondary small">{{ report.stat().st_size }} bytes</span>
+            </div>
+            <a href="/reports/download/{{ report.name }}" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
+                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
+              </svg>
+              Download
+            </a>
           </li>
           {% endfor %}
         </ul>

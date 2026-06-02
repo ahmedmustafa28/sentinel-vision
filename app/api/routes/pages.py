@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Form, Query, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from sqlalchemy import func
 
 from app.core.config import BASE_DIR
@@ -48,18 +48,23 @@ def dashboard_home(request: Request):
 @router.get("/events", response_class=HTMLResponse, summary="Event history page")
 def event_history_page(
     request: Request,
-    camera_id: int | None = Query(default=None),
+    camera_id: str | None = Query(default=None),
     event_type: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
 ):
     page_size = 20
     skip = (page - 1) * page_size
 
+    # Safely parse camera_id string into an integer to support 'All cameras' empty string
+    parsed_camera_id: int | None = None
+    if camera_id is not None and str(camera_id).strip().isdigit():
+        parsed_camera_id = int(camera_id)
+
     db = SessionLocal()
     try:
         events = list_events(
             db,
-            camera_id=camera_id,
+            camera_id=parsed_camera_id,
             event_type=event_type if event_type else None,
             skip=skip,
             limit=page_size,
@@ -67,8 +72,8 @@ def event_history_page(
         cameras = list_cameras(db, limit=1000)
 
         count_query = db.query(func.count(Event.id))
-        if camera_id is not None:
-            count_query = count_query.filter(Event.camera_id == camera_id)
+        if parsed_camera_id is not None:
+            count_query = count_query.filter(Event.camera_id == parsed_camera_id)
         if event_type:
             count_query = count_query.filter(Event.event_type == event_type)
         total_count = int(count_query.scalar() or 0)
@@ -85,7 +90,7 @@ def event_history_page(
             "title": "Event History",
             "events": events,
             "cameras": cameras,
-            "camera_id": camera_id,
+            "camera_id": parsed_camera_id,
             "event_type": event_type or "",
             "page": page,
             "total_pages": total_pages,
@@ -198,6 +203,58 @@ def ai_reports_page(request: Request):
             "latest_events": latest_events,
             "report_files": report_files,
         },
+    )
+
+
+@router.post("/reports/generate", summary="Generate AI report")
+def generate_ai_report():
+    db = SessionLocal()
+    try:
+        events = db.query(Event).order_by(Event.timestamp.desc()).limit(50).all()
+        event_texts = []
+        for e in events:
+            time_str = e.timestamp.strftime("%Y-%m-%d %H:%M:%S") if e.timestamp else ""
+            event_texts.append(f"[{time_str}] {e.event_type.upper()}: {e.description or ''} (Camera #{e.camera_id})")
+        from app.modules.ai_report.report_service import ReportService
+        service = ReportService()
+        service.generate_reports(event_texts)
+        
+        # Locate the newest generated text report file in reports folder to send to browser downloads
+        import glob
+        import os
+        reports_dir = (BASE_DIR / "data" / "reports").resolve()
+        list_of_files = glob.glob(str(reports_dir / "*.txt"))
+        if list_of_files:
+            latest_file = max(list_of_files, key=os.path.getctime)
+            return FileResponse(
+                latest_file,
+                media_type="application/octet-stream",
+                filename=os.path.basename(latest_file)
+            )
+    except Exception as exc:
+        import logging
+        logging.getLogger("app.api.routes.pages").error("Failed to generate AI report: %s", exc)
+    finally:
+        db.close()
+    return RedirectResponse(url="/reports", status_code=303)
+
+
+@router.get("/reports/download/{filename}", summary="Download report file")
+def download_report_file(filename: str):
+    from app.core.config import BASE_DIR
+    reports_dir = (BASE_DIR / "data" / "reports").resolve()
+    file_path = (reports_dir / filename).resolve()
+    # Prevent path traversal
+    if not str(file_path).startswith(str(reports_dir)):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if not file_path.exists():
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(
+        str(file_path),
+        media_type="application/octet-stream",
+        filename=filename
     )
 
 
