@@ -133,6 +133,3 @@ pytest -v
 This project is licensed under the MIT License.
 
 ---
-
-## ✍️ Author
-* **Ahmed Mustafa** - *Senior Software Engineer & AI Architect* - [GitHub Profile](https://github.com/ahmedmustafa28)
