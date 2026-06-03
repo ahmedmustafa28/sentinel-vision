@@ -91,6 +91,8 @@ ALERT_TO_EMAIL="recipient-email@gmail.com"
 ```
 
 ### 3. Install Dependencies
+Run python scripts/setup.py before installing dependencies
+
 Run these commands in your terminal to set up a virtual environment and install dependencies:
 ```bash
 # Create a virtual environment
