@@ -16,26 +16,35 @@ router = APIRouter()
 
 
 @router.get("/login", response_class=HTMLResponse, summary="Login page")
-def login_page(request: Request):
+def login_page(request: Request, db: Session = Depends(get_db_session)):
     """Renders the dashboard login page."""
     # If the user is already logged in, redirect them to the home dashboard
     token = request.cookies.get("access_token")
+    should_delete_cookie = False
     if token:
         try:
             from jose import jwt
-            from app.core.auth import ALGORITHM, settings
+            from app.core.auth import ALGORITHM, settings, is_token_blacklisted
             payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
-            if payload.get("sub"):
-                return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+            username = payload.get("sub")
+            if username and not is_token_blacklisted(db, token):
+                # Also verify the user still exists in the DB
+                user = db.query(User).filter(User.username == username).first()
+                if user:
+                    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+            should_delete_cookie = True
         except Exception:
-            pass
+            should_delete_cookie = True
 
     templates = request.app.state.templates
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request=request,
         name="pages/login.html",
         context={"title": "Login"},
     )
+    if should_delete_cookie:
+        response.delete_cookie("access_token")
+    return response
 
 
 @router.post("/auth/login", summary="Validate credentials and issue JWT")
@@ -132,5 +141,6 @@ def logout_redirect(
         expires_at = get_token_expiry(token)
         blacklist_token(db, token, expires_at)
 
-    response.delete_cookie("access_token")
-    return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+    redirect_response = RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+    redirect_response.delete_cookie("access_token")
+    return redirect_response
