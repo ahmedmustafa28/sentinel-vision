@@ -3,7 +3,7 @@ import logging
 from sqlalchemy import text
 
 from app.db.session import engine
-from app.models import Camera, Event, KnownPerson, Notification
+from app.models import Camera, Event, KnownPerson, Notification, User, BlacklistedToken
 from app.models.base import Base
 
 logger = logging.getLogger(__name__)

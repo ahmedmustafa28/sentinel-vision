@@ -69,3 +69,6 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
+
+from app.core.auth import UnauthenticatedException, unauthenticated_exception_handler
+app.add_exception_handler(UnauthenticatedException, unauthenticated_exception_handler)
