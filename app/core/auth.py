@@ -48,25 +48,21 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
 
 
 def is_token_blacklisted(db: Session, token: str) -> bool:
-    """Checks if a token has been blacklisted, running cleanup on expired entries first."""
-    try:
-        # Expiry cleanup to prevent DB bloating
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
-        db.query(BlacklistedToken).filter(BlacklistedToken.expires_at < now).delete()
-        db.commit()
-    except Exception:
-        db.rollback()
-
+    """Checks if a token has been blacklisted."""
     return db.query(BlacklistedToken).filter(BlacklistedToken.token == token).first() is not None
 
 
 def blacklist_token(db: Session, token: str, expires_at: datetime) -> None:
-    """Saves a token to the blacklist."""
+    """Saves a token to the blacklist, running cleanup on expired entries first."""
     try:
         # Convert expires_at to naive UTC datetime if it contains timezone info
         if expires_at.tzinfo is not None:
             expires_at = expires_at.astimezone(timezone.utc).replace(tzinfo=None)
             
+        # Expiry cleanup to prevent DB bloating (done here since it's already a write transaction)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        db.query(BlacklistedToken).filter(BlacklistedToken.expires_at < now).delete()
+        
         blacklisted = BlacklistedToken(token=token, expires_at=expires_at)
         db.add(blacklisted)
         db.commit()

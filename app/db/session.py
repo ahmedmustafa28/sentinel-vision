@@ -40,11 +40,12 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
         finally:
             cursor.close()
 
-# Enforce BEGIN IMMEDIATE to serialize write transactions immediately and avoid deadlocks
-@event.listens_for(engine, "begin")
-def do_begin(conn):
-    if settings.db_url.startswith("sqlite"):
-        conn.exec_driver_sql("BEGIN IMMEDIATE")
+# # Enforce BEGIN IMMEDIATE to serialize write transactions immediately and avoid deadlocks
+# @event.listens_for(engine, "begin")
+# def do_begin(conn):
+#     if settings.db_url.startswith("sqlite"):
+#         conn.exec_driver_sql("BEGIN IMMEDIATE")
+
 
 
 class RetryingSession(Session):
