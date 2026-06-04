@@ -143,4 +143,7 @@ def configure_logging() -> None:
     }
 
     dictConfig(config)
-    logging.getLogger(__name__).info("Structured and separated logging system configured successfully", extra={"level": log_level})
+    logging.getLogger(__name__).info(
+        "Structured and separated logging system configured successfully",
+        extra={"level": log_level},
+    )

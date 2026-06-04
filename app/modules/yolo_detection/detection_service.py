@@ -58,7 +58,9 @@ class DetectionService:
             },
         )
 
-    def process_frame(self, frame: np.ndarray) -> tuple[np.ndarray, list[dict[str, Any]]]:
+    def process_frame(
+        self, frame: np.ndarray
+    ) -> tuple[np.ndarray, list[dict[str, Any]]]:
         """Runs inference, annotates frame, and returns structured detections."""
         if frame is None or frame.size == 0:
             return frame, []

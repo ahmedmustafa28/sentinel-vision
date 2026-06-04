@@ -13,7 +13,9 @@ class Camera(Base):
     source_url: Mapped[str] = mapped_column(String(500), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_restricted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     updated_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -21,4 +23,6 @@ class Camera(Base):
         nullable=False,
     )
 
-    events = relationship("Event", back_populates="camera", cascade="all, delete-orphan")
+    events = relationship(
+        "Event", back_populates="camera", cascade="all, delete-orphan"
+    )

@@ -16,7 +16,7 @@ def override_auth_dependency():
         id=999,
         username="test_admin",
         hashed_password="mocked_hashed_password",
-        role="admin"
+        role="admin",
     )
 
     def mock_get_current_user():
@@ -24,8 +24,8 @@ def override_auth_dependency():
 
     # Set dependency override
     app.dependency_overrides[get_current_user] = mock_get_current_user
-    
+
     yield
-    
+
     # Clean up dependency override after test runs
     app.dependency_overrides.pop(get_current_user, None)

@@ -1,5 +1,5 @@
-from pathlib import Path
 from collections.abc import Generator
+from contextlib import contextmanager
 import time
 
 from sqlalchemy import create_engine, event
@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.exc import OperationalError
 
 from app.core.config import BASE_DIR, get_settings
-
 
 settings = get_settings()
 
@@ -19,13 +18,18 @@ if settings.db_url.startswith("sqlite:///"):
 
 engine = create_engine(
     settings.db_url,
-    connect_args={
-        "check_same_thread": False,
-        "timeout": 30,  # 30 seconds driver-level busy timeout
-    } if settings.db_url.startswith("sqlite") else {},
+    connect_args=(
+        {
+            "check_same_thread": False,
+            "timeout": 30,  # 30 seconds driver-level busy timeout
+        }
+        if settings.db_url.startswith("sqlite")
+        else {}
+    ),
     echo=settings.db_echo,
     future=True,
 )
+
 
 # Enable WAL mode and set busy_timeout for SQLite connection pool
 @event.listens_for(engine, "connect")
@@ -40,12 +44,12 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
         finally:
             cursor.close()
 
+
 # # Enforce BEGIN IMMEDIATE to serialize write transactions immediately and avoid deadlocks
 # @event.listens_for(engine, "begin")
 # def do_begin(conn):
 #     if settings.db_url.startswith("sqlite"):
 #         conn.exec_driver_sql("BEGIN IMMEDIATE")
-
 
 
 class RetryingSession(Session):
@@ -62,7 +66,7 @@ class RetryingSession(Session):
                 self.rollback()
                 if "locked" in str(exc).lower() or "busy" in str(exc).lower():
                     if attempt < max_retries - 1:
-                        time.sleep(backoff_factor * (2 ** attempt))
+                        time.sleep(backoff_factor * (2**attempt))
                         continue
                 raise exc
             except Exception as exc:
@@ -70,7 +74,9 @@ class RetryingSession(Session):
                 raise exc
 
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=RetryingSession)
+SessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, bind=engine, class_=RetryingSession
+)
 
 
 def get_db_session() -> Generator[Session, None, None]:
@@ -80,8 +86,6 @@ def get_db_session() -> Generator[Session, None, None]:
     finally:
         db.close()
 
-
-from contextlib import contextmanager
 
 @contextmanager
 def db_session_context() -> Generator[Session, None, None]:
@@ -98,6 +102,8 @@ def db_session_context() -> Generator[Session, None, None]:
         db.close()
 
 
-def commit_with_retry(db: Session, max_retries: int = 3, backoff_factor: float = 0.1) -> None:
+def commit_with_retry(
+    db: Session, max_retries: int = 3, backoff_factor: float = 0.1
+) -> None:
     """Commits a transaction, leveraging RetryingSession's automatic commit retry mechanism."""
     db.commit()

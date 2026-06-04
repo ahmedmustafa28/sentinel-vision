@@ -1,6 +1,6 @@
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 import logging
 
 from app.core.config import get_settings
@@ -27,21 +27,29 @@ class AlertThrottle:
                 return
             self._initialized = True
             self.settings = get_settings()
-            self.cooldowns: dict[tuple[int, str], float] = {}  # (camera_id, event_type) -> timestamp (float)
-            self.digest_batches: dict[tuple[int, str], dict] = {}  # (camera_id, event_type) -> aggregated details
-            
+            self.cooldowns: dict[tuple[int, str], float] = (
+                {}
+            )  # (camera_id, event_type) -> timestamp (float)
+            self.digest_batches: dict[tuple[int, str], dict] = (
+                {}
+            )  # (camera_id, event_type) -> aggregated details
+
             self._stop_event = threading.Event()
             self.digest_thread: threading.Thread | None = None
-            
+
             # Start digest thread if digest mode is enabled in the configuration
-            if self.settings.alert_digest_minutes and self.settings.alert_digest_minutes > 0:
+            if (
+                self.settings.alert_digest_minutes
+                and self.settings.alert_digest_minutes > 0
+            ):
                 self.digest_thread = threading.Thread(
-                    target=self._digest_loop,
-                    name="alert-digest-loop",
-                    daemon=True
+                    target=self._digest_loop, name="alert-digest-loop", daemon=True
                 )
                 self.digest_thread.start()
-                logger.info("AlertThrottle digest thread started with window %s minutes", self.settings.alert_digest_minutes)
+                logger.info(
+                    "AlertThrottle digest thread started with window %s minutes",
+                    self.settings.alert_digest_minutes,
+                )
 
     def should_fire(
         self,
@@ -64,14 +72,17 @@ class AlertThrottle:
         with self._lock:
             key = (camera_id, event_type)
             last_fired = self.cooldowns.get(key)
-            
+
             if last_fired is None or (current_time - last_fired) >= cooldown_seconds:
                 # Update cooldown timestamp and allow alert to fire
                 self.cooldowns[key] = current_time
                 return True
 
             # Alert is suppressed! Batch it if digest mode is enabled.
-            if self.settings.alert_digest_minutes and self.settings.alert_digest_minutes > 0:
+            if (
+                self.settings.alert_digest_minutes
+                and self.settings.alert_digest_minutes > 0
+            ):
                 if key not in self.digest_batches:
                     self.digest_batches[key] = {
                         "camera_id": camera_id,
@@ -105,13 +116,21 @@ class AlertThrottle:
         body_parts = [
             "AI CCTV Surveillance - Alert Digest Summary\n",
             "The following events were suppressed during the last digest window due to active cooldowns:\n",
-            "=" * 60
+            "=" * 60,
         ]
 
         all_notif_ids = []
         for key, item in batch.items():
-            first_str = item["first_occurrence"].isoformat() if hasattr(item["first_occurrence"], "isoformat") else str(item["first_occurrence"])
-            last_str = item["last_occurrence"].isoformat() if hasattr(item["last_occurrence"], "isoformat") else str(item["last_occurrence"])
+            first_str = (
+                item["first_occurrence"].isoformat()
+                if hasattr(item["first_occurrence"], "isoformat")
+                else str(item["first_occurrence"])
+            )
+            last_str = (
+                item["last_occurrence"].isoformat()
+                if hasattr(item["last_occurrence"], "isoformat")
+                else str(item["last_occurrence"])
+            )
 
             body_parts.append(
                 f"Camera: {item['camera_name']} (ID: {item['camera_id']})\n"
@@ -123,13 +142,19 @@ class AlertThrottle:
             )
             all_notif_ids.extend(item["notification_ids"])
 
-        body_parts.append("\nThis is an automated digest message from your AI CCTV Surveillance system.")
+        body_parts.append(
+            "\nThis is an automated digest message from your AI CCTV Surveillance system."
+        )
         email_body = "\n".join(body_parts)
 
         # Send the alert email via NotificationService
         from app.services.notification_service import NotificationService
+
         notifier = NotificationService()
-        logger.info("Dispatching alert digest email containing %s suppressed alerts", len(all_notif_ids))
+        logger.info(
+            "Dispatching alert digest email containing %s suppressed alerts",
+            len(all_notif_ids),
+        )
         success = notifier._send_email_alert(subject=subject, body=email_body)
 
         # Update the notification rows in the database
@@ -147,7 +172,9 @@ class AlertThrottle:
                     else:
                         notif.status = "FAILED"
             commit_with_retry(db)
-            logger.info("Successfully updated notification statuses in database for the digest batch")
+            logger.info(
+                "Successfully updated notification statuses in database for the digest batch"
+            )
         except Exception as exc:
             logger.error("Failed to update database for digest notifications: %s", exc)
             db.rollback()

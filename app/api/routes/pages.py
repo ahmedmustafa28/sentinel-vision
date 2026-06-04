@@ -5,7 +5,13 @@ from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from sqlalchemy import func
 
 from app.core.config import BASE_DIR
-from app.db.crud_camera import create_camera, delete_camera, get_camera_by_id, list_cameras, update_camera
+from app.db.crud_camera import (
+    create_camera,
+    delete_camera,
+    get_camera_by_id,
+    list_cameras,
+    update_camera,
+)
 from app.db.crud_event import list_events
 from app.db.session import SessionLocal
 from app.models.event import Event
@@ -18,7 +24,9 @@ def dashboard_home(request: Request):
     db = SessionLocal()
     try:
         total_cameras = len(list_cameras(db, limit=1000))
-        active_cameras = len([cam for cam in list_cameras(db, limit=1000) if cam.is_active])
+        active_cameras = len(
+            [cam for cam in list_cameras(db, limit=1000) if cam.is_active]
+        )
         recent_events = list_events(db, limit=10)
 
         event_counts = (
@@ -104,10 +112,13 @@ def camera_management_page(request: Request):
     try:
         cameras = list_cameras(db, limit=1000)
         import re
+
         for camera in cameras:
             url = camera.source_url
             if url.startswith("rtsp://"):
-                camera.source_url = re.sub(r"(rtsp://)([^:]+):([^@]+)(@)", r"\1\2:***\4", url)
+                camera.source_url = re.sub(
+                    r"(rtsp://)([^:]+):([^@]+)(@)", r"\1\2:***\4", url
+                )
     finally:
         db.close()
 
@@ -131,14 +142,14 @@ def add_camera(
 ):
     from app.core.validators import validate_camera_source
     from fastapi import HTTPException
-    
+
     try:
         validated_source = validate_camera_source(source_url)
         source_url = str(validated_source)
-    except ValueError as exc:
+    except ValueError:
         raise HTTPException(
             status_code=422,
-            detail="Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed"
+            detail="Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed",
         )
 
     db = SessionLocal()
@@ -226,14 +237,18 @@ def generate_ai_report():
         event_texts = []
         for e in events:
             time_str = e.timestamp.strftime("%Y-%m-%d %H:%M:%S") if e.timestamp else ""
-            event_texts.append(f"[{time_str}] {e.event_type.upper()}: {e.description or ''} (Camera #{e.camera_id})")
+            event_texts.append(
+                f"[{time_str}] {e.event_type.upper()}: {e.description or ''} (Camera #{e.camera_id})"
+            )
         from app.modules.ai_report.report_service import ReportService
+
         service = ReportService()
         service.generate_reports(event_texts)
-        
+
         # Locate the newest generated text report file in reports folder to send to browser downloads
         import glob
         import os
+
         reports_dir = (BASE_DIR / "data" / "reports").resolve()
         list_of_files = glob.glob(str(reports_dir / "*.txt"))
         if list_of_files:
@@ -241,11 +256,14 @@ def generate_ai_report():
             return FileResponse(
                 latest_file,
                 media_type="application/octet-stream",
-                filename=os.path.basename(latest_file)
+                filename=os.path.basename(latest_file),
             )
     except Exception as exc:
         import logging
-        logging.getLogger("app.api.routes.pages").error("Failed to generate AI report: %s", exc)
+
+        logging.getLogger("app.api.routes.pages").error(
+            "Failed to generate AI report: %s", exc
+        )
     finally:
         db.close()
     return RedirectResponse(url="/reports", status_code=303)
@@ -254,36 +272,43 @@ def generate_ai_report():
 @router.get("/reports/download/{filename}", summary="Download report file")
 def download_report_file(filename: str):
     from app.core.config import BASE_DIR
+
     reports_dir = (BASE_DIR / "data" / "reports").resolve()
     file_path = (reports_dir / filename).resolve()
     # Prevent path traversal
     if not str(file_path).startswith(str(reports_dir)):
         from fastapi import HTTPException
+
         raise HTTPException(status_code=400, detail="Invalid path")
     if not file_path.exists():
         from fastapi import HTTPException
+
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(
-        str(file_path),
-        media_type="application/octet-stream",
-        filename=filename
+        str(file_path), media_type="application/octet-stream", filename=filename
     )
 
 
-@router.post("/cameras/{camera_id}/toggle_restricted", summary="Toggle restricted area status")
+@router.post(
+    "/cameras/{camera_id}/toggle_restricted", summary="Toggle restricted area status"
+)
 def toggle_restricted_camera(camera_id: int):
     db = SessionLocal()
     try:
         camera = get_camera_by_id(db, camera_id)
         if camera is not None:
-            update_camera(db, camera_id=camera_id, is_restricted=not camera.is_restricted)
+            update_camera(
+                db, camera_id=camera_id, is_restricted=not camera.is_restricted
+            )
     finally:
         db.close()
 
     return RedirectResponse(url="/cameras", status_code=303)
 
 
-@router.get("/notifications", response_class=HTMLResponse, summary="Notification history page")
+@router.get(
+    "/notifications", response_class=HTMLResponse, summary="Notification history page"
+)
 def notification_history_page(
     request: Request,
     filter_type: str = Query(default="all"),
@@ -301,10 +326,14 @@ def notification_history_page(
             is_read = True
 
         from app.db.crud_notification import list_notifications
-        notifications = list_notifications(db, is_read=is_read, skip=skip, limit=page_size)
+
+        notifications = list_notifications(
+            db, is_read=is_read, skip=skip, limit=page_size
+        )
 
         from sqlalchemy import func
         from app.models.notification import Notification
+
         count_query = db.query(func.count(Notification.id))
         if is_read is not None:
             count_query = count_query.filter(Notification.is_read == is_read)
@@ -327,11 +356,14 @@ def notification_history_page(
     )
 
 
-@router.post("/notifications/{notification_id}/read", summary="Mark notification as read")
+@router.post(
+    "/notifications/{notification_id}/read", summary="Mark notification as read"
+)
 def read_notification(notification_id: int):
     db = SessionLocal()
     try:
         from app.db.crud_notification import mark_notification_as_read
+
         mark_notification_as_read(db, notification_id, is_read=True)
     finally:
         db.close()
@@ -343,6 +375,7 @@ def read_all_notifications():
     db = SessionLocal()
     try:
         from app.db.crud_notification import mark_all_notifications_as_read
+
         mark_all_notifications_as_read(db)
     finally:
         db.close()

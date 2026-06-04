@@ -45,7 +45,9 @@ def list_notifications(
     return query.order_by(Notification.timestamp.desc()).offset(skip).limit(limit).all()
 
 
-def mark_notification_as_read(db: Session, notification_id: int, is_read: bool = True) -> Notification | None:
+def mark_notification_as_read(
+    db: Session, notification_id: int, is_read: bool = True
+) -> Notification | None:
     notification = get_notification_by_id(db, notification_id)
     if notification is None:
         return None
@@ -56,10 +58,19 @@ def mark_notification_as_read(db: Session, notification_id: int, is_read: bool =
 
 
 def mark_all_notifications_as_read(db: Session) -> int:
-    result = db.query(Notification).filter(Notification.is_read == False).update({"is_read": True}, synchronize_session=False)
+    result = (
+        db.query(Notification)
+        .filter(Notification.is_read.is_(False))
+        .update({"is_read": True}, synchronize_session=False)
+    )
     db.commit()
     return result
 
 
 def get_unread_notification_count(db: Session) -> int:
-    return int(db.query(func.count(Notification.id)).filter(Notification.is_read == False).scalar() or 0)
+    return int(
+        db.query(func.count(Notification.id))
+        .filter(Notification.is_read.is_(False))
+        .scalar()
+        or 0
+    )

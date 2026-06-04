@@ -2,6 +2,7 @@ import ipaddress
 import urllib.parse
 from app.core.config import get_settings
 
+
 def validate_camera_source(source: str | int) -> str | int:
     """
     Validates a camera source value.
@@ -15,12 +16,16 @@ def validate_camera_source(source: str | int) -> str | int:
     # 1. Handle integer input
     if isinstance(source, int):
         if source < 0:
-            raise ValueError("Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed")
+            raise ValueError(
+                "Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed"
+            )
         return source
 
     # 2. Handle string input
     if not isinstance(source, str):
-        raise ValueError("Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed")
+        raise ValueError(
+            "Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed"
+        )
 
     stripped_source = source.strip()
 
@@ -29,24 +34,34 @@ def validate_camera_source(source: str | int) -> str | int:
         val = int(stripped_source)
         if val >= 0:
             return val
-        raise ValueError("Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed")
+        raise ValueError(
+            "Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed"
+        )
 
     # Parse string as URL
     try:
         parsed = urllib.parse.urlparse(stripped_source)
     except Exception as exc:
-        raise ValueError("Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed") from exc
+        raise ValueError(
+            "Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed"
+        ) from exc
 
     scheme = parsed.scheme.lower() if parsed.scheme else ""
     if scheme not in {"rtsp", "rtsps", "http", "https"}:
-        raise ValueError("Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed")
+        raise ValueError(
+            "Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed"
+        )
 
     if not parsed.netloc:
-        raise ValueError("Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed")
+        raise ValueError(
+            "Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed"
+        )
 
     hostname = parsed.hostname
     if not hostname:
-        raise ValueError("Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed")
+        raise ValueError(
+            "Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed"
+        )
 
     # Check for private IP range blocking
     is_private = False
@@ -74,6 +89,8 @@ def validate_camera_source(source: str | int) -> str | int:
     if is_private:
         settings = get_settings()
         if not settings.allow_local_rtsp:
-            raise ValueError("Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed")
+            raise ValueError(
+                "Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed"
+            )
 
     return stripped_source

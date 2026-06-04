@@ -10,7 +10,9 @@ logger = logging.getLogger("app.services.health_service")
 settings = get_settings()
 
 
-def health_status(processor: Any = None, registry: Any = None, scheduler: Any = None) -> dict[str, Any]:
+def health_status(
+    processor: Any = None, registry: Any = None, scheduler: Any = None
+) -> dict[str, Any]:
     """Inspects and returns system health status for cameras, models, database, and background processing."""
     status = "healthy"
     checks = {}
@@ -34,18 +36,19 @@ def health_status(processor: Any = None, registry: Any = None, scheduler: Any = 
     # 2. Camera connection status check
     camera_health = "healthy"
     camera_details = []
-    
+
     active_cameras_count = 0
     connected_cameras_count = 0
-    
+
     try:
         db = SessionLocal()
         try:
             from app.db.crud_camera import list_cameras
+
             cameras = list_cameras(db, limit=1000)
             active_cameras = [c for c in cameras if c.is_active]
             active_cameras_count = len(active_cameras)
-            
+
             for cam in active_cameras:
                 cam_status = "disconnected"
                 if registry is not None:
@@ -56,13 +59,15 @@ def health_status(processor: Any = None, registry: Any = None, scheduler: Any = 
                         if latest_frame is not None:
                             cam_status = "connected"
                             connected_cameras_count += 1
-                
-                camera_details.append({
-                    "id": cam.id,
-                    "name": cam.name,
-                    "source": cam.source_url,
-                    "status": cam_status
-                })
+
+                camera_details.append(
+                    {
+                        "id": cam.id,
+                        "name": cam.name,
+                        "source": cam.source_url,
+                        "status": cam_status,
+                    }
+                )
         finally:
             db.close()
     except Exception as exc:
@@ -79,9 +84,9 @@ def health_status(processor: Any = None, registry: Any = None, scheduler: Any = 
         "status": camera_health,
         "active_count": active_cameras_count,
         "connected_count": connected_cameras_count,
-        "cameras": camera_details
+        "cameras": camera_details,
     }
-    
+
     if camera_health == "unhealthy" and status == "healthy":
         status = "unhealthy"
     elif camera_health == "degraded" and status == "healthy":
@@ -118,38 +123,46 @@ def health_status(processor: Any = None, registry: Any = None, scheduler: Any = 
     # Surveillance processor daemon thread check
     worker_running = False
     if processor is not None and processor._running is not None:
-        if processor._running.is_set() and processor._thread is not None and processor._thread.is_alive():
+        if (
+            processor._running.is_set()
+            and processor._thread is not None
+            and processor._thread.is_alive()
+        ):
             worker_running = True
 
-    checks["surveillance_processor_running"] = "healthy" if worker_running else "unhealthy"
+    checks["surveillance_processor_running"] = (
+        "healthy" if worker_running else "unhealthy"
+    )
     if not worker_running and status == "healthy":
         status = "degraded"
 
     # Alert throttle state check
     import time
     from app.services.alert_throttle import AlertThrottle
+
     throttle = AlertThrottle()
-    
+
     current_time = time.time()
     cooldowns_list = []
     cooldown_seconds = throttle.settings.alert_cooldown_seconds
-    
+
     for (camera_id, event_type), last_fired in list(throttle.cooldowns.items()):
         elapsed = current_time - last_fired
         remaining = cooldown_seconds - elapsed
         if remaining > 0:
-            cooldowns_list.append({
-                "camera_id": camera_id,
-                "event_type": event_type,
-                "remaining_seconds": round(remaining, 2)
-            })
-            
-    checks["alert_throttle"] = {
-        "cooldowns": cooldowns_list
-    }
+            cooldowns_list.append(
+                {
+                    "camera_id": camera_id,
+                    "event_type": event_type,
+                    "remaining_seconds": round(remaining, 2),
+                }
+            )
+
+    checks["alert_throttle"] = {"cooldowns": cooldowns_list}
 
     # 6. Retention job health check
     from app.jobs.retention_job import last_run_time as retention_last_run
+
     next_run = None
     if scheduler is not None:
         try:
@@ -161,7 +174,7 @@ def health_status(processor: Any = None, registry: Any = None, scheduler: Any = 
 
     retention_info = {
         "last_run": retention_last_run.isoformat() if retention_last_run else None,
-        "next_run": next_run
+        "next_run": next_run,
     }
     checks["retention_job"] = retention_info
 
@@ -171,5 +184,5 @@ def health_status(processor: Any = None, registry: Any = None, scheduler: Any = 
         "environment": settings.app_env,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "retention_job": retention_info,
-        "checks": checks
+        "checks": checks,
     }

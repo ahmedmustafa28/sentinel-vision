@@ -1,7 +1,6 @@
 import os
 import time
 import pytest
-from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -10,7 +9,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.models.base import Base
 from app.models.event import Event
-from app.jobs.retention_job import run_retention_cleanup, last_run_time
+from app.jobs.retention_job import run_retention_cleanup
 from app.core.config import get_settings
 from app.main import app
 
@@ -65,7 +64,7 @@ def test_run_retention_cleanup(db_session, tmp_path, monkeypatch):
         camera_id=1,
         event_type="person",
         timestamp=old_time,
-        image_path=str(old_file)
+        image_path=str(old_file),
     )
     # Record 2: New
     new_time = datetime.now(timezone.utc) - timedelta(days=1)
@@ -74,7 +73,7 @@ def test_run_retention_cleanup(db_session, tmp_path, monkeypatch):
         camera_id=1,
         event_type="person",
         timestamp=new_time,
-        image_path=str(new_file)
+        image_path=str(new_file),
     )
     db_session.add(old_event)
     db_session.add(new_event)
@@ -108,7 +107,7 @@ def test_api_run_retention_endpoint(client, db_session, monkeypatch):
         app_env = "test"
 
     mock_settings = MockSettings()
-    
+
     # Register dependency overrides for FastAPI
     app.dependency_overrides[get_settings] = lambda: mock_settings
     monkeypatch.setattr("app.jobs.retention_job.get_settings", lambda: mock_settings)
@@ -119,7 +118,9 @@ def test_api_run_retention_endpoint(client, db_session, monkeypatch):
         assert response.status_code == 422
 
         # 2. Access with wrong key -> expects 401
-        response = client.post("/admin/run-retention", headers={"X-Admin-Key": "wrong_key"})
+        response = client.post(
+            "/admin/run-retention", headers={"X-Admin-Key": "wrong_key"}
+        )
         assert response.status_code == 401
         assert response.json()["detail"] == "Invalid Admin Key"
 
@@ -130,9 +131,13 @@ def test_api_run_retention_endpoint(client, db_session, monkeypatch):
             called.append((days, path))
             return {"deleted_snapshots": 3, "deleted_event_records": 4}
 
-        monkeypatch.setattr("app.api.routes.api_admin.run_retention_cleanup", mock_cleanup)
+        monkeypatch.setattr(
+            "app.api.routes.api_admin.run_retention_cleanup", mock_cleanup
+        )
 
-        response = client.post("/admin/run-retention", headers={"X-Admin-Key": "test_secret_admin_key"})
+        response = client.post(
+            "/admin/run-retention", headers={"X-Admin-Key": "test_secret_admin_key"}
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "success"

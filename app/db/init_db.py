@@ -3,7 +3,6 @@ import logging
 from sqlalchemy import text
 
 from app.db.session import engine
-from app.models import Camera, Event, KnownPerson, Notification, User, BlacklistedToken
 from app.models.base import Base
 
 logger = logging.getLogger(__name__)
@@ -15,13 +14,21 @@ def initialize_database() -> None:
     with engine.connect() as connection:
         # Lightweight migrations to add new columns if they do not exist
         try:
-            connection.execute(text("ALTER TABLE notifications ADD COLUMN retry_count INTEGER DEFAULT 0 NOT NULL"))
+            connection.execute(
+                text(
+                    "ALTER TABLE notifications ADD COLUMN retry_count INTEGER DEFAULT 0 NOT NULL"
+                )
+            )
             logger.info("Migrated notifications table: added retry_count column")
         except Exception:
             pass  # Column already exists or table doesn't exist yet
 
         try:
-            connection.execute(text("ALTER TABLE notifications ADD COLUMN status VARCHAR(50) DEFAULT 'PENDING' NOT NULL"))
+            connection.execute(
+                text(
+                    "ALTER TABLE notifications ADD COLUMN status VARCHAR(50) DEFAULT 'PENDING' NOT NULL"
+                )
+            )
             logger.info("Migrated notifications table: added status column")
         except Exception:
             pass  # Column already exists

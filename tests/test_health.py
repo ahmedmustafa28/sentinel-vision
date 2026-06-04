@@ -35,7 +35,7 @@ def test_health_status_independent(db_session, monkeypatch):
 
     # Invoke independent health status check
     payload = health_status(processor=None, registry=None)
-    
+
     assert payload is not None
     assert "status" in payload
     assert "service" in payload
@@ -45,15 +45,15 @@ def test_health_status_independent(db_session, monkeypatch):
 
 def test_health_endpoint_rest():
     client = TestClient(app)
-    
+
     # 1. Verify root /health route exists and responds successfully
     response = client.get("/health")
     assert response.status_code == 200
-    
+
     data = response.json()
     assert "status" in data
     assert "checks" in data
-    
+
     # 2. Verify legacy /api/health route responds successfully
     response_legacy = client.get("/api/health")
     assert response_legacy.status_code == 200

@@ -5,7 +5,6 @@ from dataclasses import dataclass
 
 from dotenv import load_dotenv
 
-
 BASE_DIR = Path(__file__).resolve().parents[2]
 load_dotenv(BASE_DIR / ".env")
 
@@ -85,8 +84,12 @@ class Settings:
             stream_fps=_to_int(os.getenv("STREAM_FPS"), 20),
             event_snapshot_dir=os.getenv("EVENT_SNAPSHOT_DIR", "./data/snapshots"),
             event_dedupe_seconds=_to_int(os.getenv("EVENT_DEDUPE_SECONDS"), 10),
-            object_disappearance_seconds=_to_int(os.getenv("OBJECT_DISAPPEARANCE_SECONDS"), 30),
-            motion_min_changed_pixels=_to_int(os.getenv("MOTION_MIN_CHANGED_PIXELS"), 2500),
+            object_disappearance_seconds=_to_int(
+                os.getenv("OBJECT_DISAPPEARANCE_SECONDS"), 30
+            ),
+            motion_min_changed_pixels=_to_int(
+                os.getenv("MOTION_MIN_CHANGED_PIXELS"), 2500
+            ),
             motion_min_contour_area=_to_int(os.getenv("MOTION_MIN_CONTOUR_AREA"), 1200),
             known_faces_dir=os.getenv("KNOWN_FACES_DIR", "known_faces"),
             face_recognition_tolerance=float(os.getenv("FACE_TOLERANCE", "0.5")),
@@ -100,7 +103,9 @@ class Settings:
             smtp_port=_to_int(os.getenv("SMTP_PORT"), 587),
             smtp_user=os.getenv("SMTP_USER", ""),
             smtp_pass=os.getenv("SMTP_PASS", ""),
-            alert_to_email=os.getenv("ALERT_TO_EMAIL") or os.getenv("SMTP_TO_EMAIL") or "",
+            alert_to_email=os.getenv("ALERT_TO_EMAIL")
+            or os.getenv("SMTP_TO_EMAIL")
+            or "",
             alert_cooldown_seconds=_to_int(os.getenv("ALERT_COOLDOWN_SECONDS"), 60),
             alert_digest_minutes=_to_int(os.getenv("ALERT_DIGEST_MINUTES"), 0) or None,
             allow_local_rtsp=_to_bool(os.getenv("ALLOW_LOCAL_RTSP"), False),

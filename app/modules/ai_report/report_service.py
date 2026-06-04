@@ -26,7 +26,9 @@ class ReportService:
         settings = get_settings()
 
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._ollama_base_url = (ollama_base_url or settings.ollama_base_url).rstrip("/")
+        self._ollama_base_url = (ollama_base_url or settings.ollama_base_url).rstrip(
+            "/"
+        )
         self._model_name = model_name or settings.ollama_model
         self._temperature = (
             max(0.0, min(1.0, temperature))
@@ -45,10 +47,14 @@ class ReportService:
 
     def generate_reports(self, events: list[str]) -> dict[str, str]:
         """Generates daily, suspicious activity, and weekly reports."""
-        sanitized_events = [event.strip() for event in events if event and event.strip()]
+        sanitized_events = [
+            event.strip() for event in events if event and event.strip()
+        ]
 
         daily_report = self.generate_daily_report(sanitized_events)
-        suspicious_activity_report = self.generate_suspicious_activity_report(sanitized_events)
+        suspicious_activity_report = self.generate_suspicious_activity_report(
+            sanitized_events
+        )
         weekly_report = self.generate_weekly_report(sanitized_events)
 
         reports = {
@@ -121,7 +127,9 @@ class ReportService:
 
         return text
 
-    def _build_report_prompt(self, *, report_type: str, instructions: str, events: list[str]) -> str:
+    def _build_report_prompt(
+        self, *, report_type: str, instructions: str, events: list[str]
+    ) -> str:
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         if events:
             events_block = "\n".join(f"- {item}" for item in events)

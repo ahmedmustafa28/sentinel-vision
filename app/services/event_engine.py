@@ -53,21 +53,31 @@ class EventEngine:
         self._screenshot_dir = resolved_screenshot_dir
         self._dedupe_seconds = max(
             1,
-            dedupe_seconds if dedupe_seconds is not None else settings.event_dedupe_seconds,
+            (
+                dedupe_seconds
+                if dedupe_seconds is not None
+                else settings.event_dedupe_seconds
+            ),
         )
-        self._object_disappearance_seconds = max(1, settings.object_disappearance_seconds)
+        self._object_disappearance_seconds = max(
+            1, settings.object_disappearance_seconds
+        )
         self._face_event_dedupe_seconds = max(1, face_event_dedupe_seconds)
         self._motion_min_changed_pixels = max(
             1,
-            motion_min_changed_pixels
-            if motion_min_changed_pixels is not None
-            else settings.motion_min_changed_pixels,
+            (
+                motion_min_changed_pixels
+                if motion_min_changed_pixels is not None
+                else settings.motion_min_changed_pixels
+            ),
         )
         self._motion_min_contour_area = max(
             1,
-            motion_min_contour_area
-            if motion_min_contour_area is not None
-            else settings.motion_min_contour_area,
+            (
+                motion_min_contour_area
+                if motion_min_contour_area is not None
+                else settings.motion_min_contour_area
+            ),
         )
 
         self._last_event_epoch: dict[str, float] = {}
@@ -182,7 +192,9 @@ class EventEngine:
 
         return generated_events
 
-    def _compute_object_removal_events(self, camera_id: int, current_labels: set[str]) -> list[str]:
+    def _compute_object_removal_events(
+        self, camera_id: int, current_labels: set[str]
+    ) -> list[str]:
         now = time.time()
         tracked_now = current_labels.intersection(self._TRACKED_REMOVAL_OBJECTS)
 
@@ -217,7 +229,10 @@ class EventEngine:
                     continue
 
                 disappeared_for = now - last_seen
-                if disappeared_for >= float(self._object_disappearance_seconds) and not alerted:
+                if (
+                    disappeared_for >= float(self._object_disappearance_seconds)
+                    and not alerted
+                ):
                     state["alerted"] = True
                     removal_events.append(label)
 
@@ -242,7 +257,9 @@ class EventEngine:
         threshold = cv2.dilate(threshold, None, iterations=2)
 
         changed_pixels = int(cv2.countNonZero(threshold))
-        contours, _ = cv2.findContours(threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(
+            threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
         largest_contour_area = max((cv2.contourArea(c) for c in contours), default=0.0)
 
         return (
@@ -319,6 +336,7 @@ class EventEngine:
 
             try:
                 from app.services.notification_service import NotificationService
+
                 notifier = NotificationService()
                 notifier.process_event(db, created)
             except Exception as e_error:
@@ -326,7 +344,9 @@ class EventEngine:
 
             return {
                 "id": created.id,
-                "timestamp": created.timestamp.isoformat() if created.timestamp else None,
+                "timestamp": (
+                    created.timestamp.isoformat() if created.timestamp else None
+                ),
                 "event_type": created.event_type,
                 "description": created.description,
                 "camera_id": created.camera_id,
@@ -338,7 +358,9 @@ class EventEngine:
         finally:
             db.close()
 
-    def _should_emit(self, dedupe_key: str, *, dedupe_seconds: int | None = None) -> bool:
+    def _should_emit(
+        self, dedupe_key: str, *, dedupe_seconds: int | None = None
+    ) -> bool:
         now = time.time()
         effective_dedupe_seconds = float(dedupe_seconds or self._dedupe_seconds)
 
@@ -350,7 +372,9 @@ class EventEngine:
             self._last_event_epoch[dedupe_key] = now
             return True
 
-    def _save_event_screenshot(self, *, camera_id: int, event_type: str, frame: np.ndarray) -> str | None:
+    def _save_event_screenshot(
+        self, *, camera_id: int, event_type: str, frame: np.ndarray
+    ) -> str | None:
         if frame is None or frame.size == 0:
             return None
 
@@ -362,7 +386,9 @@ class EventEngine:
         try:
             ok = cv2.imwrite(str(file_path), frame)
             if not ok:
-                self._logger.error("Failed to write event screenshot", extra={"file": str(file_path)})
+                self._logger.error(
+                    "Failed to write event screenshot", extra={"file": str(file_path)}
+                )
                 return None
         except Exception as exc:
             self._logger.exception("Error saving event screenshot: %s", exc)

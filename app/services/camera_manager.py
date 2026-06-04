@@ -57,7 +57,9 @@ class CameraManager:
                 daemon=True,
             )
             self._capture_thread.start()
-            self._logger.info("Camera manager started", extra={"source": str(self._source)})
+            self._logger.info(
+                "Camera manager started", extra={"source": str(self._source)}
+            )
 
     def stop(self, *, join_timeout: float = 3.0) -> None:
         with self._state_lock:
@@ -102,7 +104,10 @@ class CameraManager:
                     self._consecutive_failures += 1
                     self._logger.warning(
                         "Failed to read frame",
-                        extra={"failures": self._consecutive_failures, "source": str(self._source)},
+                        extra={
+                            "failures": self._consecutive_failures,
+                            "source": str(self._source),
+                        },
                     )
 
                     if self._consecutive_failures >= self._max_consecutive_failures:
@@ -128,7 +133,9 @@ class CameraManager:
 
     def _try_reconnect(self) -> None:
         try:
-            self._logger.info("Attempting camera connect", extra={"source": str(self._source)})
+            self._logger.info(
+                "Attempting camera connect", extra={"source": str(self._source)}
+            )
 
             capture = cv2.VideoCapture(self._normalized_source(), cv2.CAP_FFMPEG)
             if not capture.isOpened():
@@ -136,7 +143,9 @@ class CameraManager:
                 capture = cv2.VideoCapture(self._normalized_source())
 
             if not capture.isOpened():
-                self._logger.error("Camera connect failed", extra={"source": str(self._source)})
+                self._logger.error(
+                    "Camera connect failed", extra={"source": str(self._source)}
+                )
                 time.sleep(self._reconnect_interval)
                 return
 

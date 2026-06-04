@@ -9,6 +9,7 @@ import numpy as np
 
 from app.core.config import BASE_DIR, get_settings
 
+
 # Fallback / Mock stub for face_recognition if the library is not installed
 class MockFaceRecognition:
     @staticmethod
@@ -48,7 +49,9 @@ class FaceRecognitionService:
         settings = get_settings()
         self._logger = logging.getLogger(self.__class__.__name__)
         self._tolerance = (
-            max(0.1, min(1.0, tolerance)) if tolerance is not None else settings.face_recognition_tolerance
+            max(0.1, min(1.0, tolerance))
+            if tolerance is not None
+            else settings.face_recognition_tolerance
         )
         self._model = model or settings.face_recognition_model
 
@@ -87,14 +90,18 @@ class FaceRecognitionService:
                 image = face_recognition.load_image_file(str(image_path))
                 encodings = face_recognition.face_encodings(image)
                 if not encodings:
-                    self._logger.warning("No face found in known image", extra={"file": str(image_path)})
+                    self._logger.warning(
+                        "No face found in known image", extra={"file": str(image_path)}
+                    )
                     continue
 
                 person_name = image_path.stem.strip() or "Unknown"
                 self._known_names.append(person_name)
                 self._known_encodings.append(encodings[0])
             except Exception as exc:
-                self._logger.exception("Failed loading known face %s: %s", image_path, exc)
+                self._logger.exception(
+                    "Failed loading known face %s: %s", image_path, exc
+                )
 
         self._logger.info(
             "Known faces loaded",
@@ -115,12 +122,16 @@ class FaceRecognitionService:
         face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
         results: list[dict[str, Any]] = []
 
-        for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
+        for (top, right, bottom, left), face_encoding in zip(
+            face_locations, face_encodings
+        ):
             person_name = "Unknown"
             distance = None
 
             if self._known_encodings:
-                distances = face_recognition.face_distance(self._known_encodings, face_encoding)
+                distances = face_recognition.face_distance(
+                    self._known_encodings, face_encoding
+                )
                 if len(distances) > 0:
                     best_index = int(np.argmin(distances))
                     best_distance = float(distances[best_index])
@@ -178,7 +189,9 @@ class FaceRecognitionService:
 
         return annotated
 
-    def process_frame(self, frame: np.ndarray) -> tuple[np.ndarray, list[dict[str, Any]]]:
+    def process_frame(
+        self, frame: np.ndarray
+    ) -> tuple[np.ndarray, list[dict[str, Any]]]:
         """Runs recognition and returns annotated frame with face identity data."""
         faces = self.recognize_faces(frame)
         annotated = self.annotate_faces(frame, faces)

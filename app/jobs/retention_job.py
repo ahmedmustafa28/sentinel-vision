@@ -22,8 +22,10 @@ def run_retention_cleanup(retention_days: int, snapshot_dir: Path) -> dict:
     """
     global last_run_time
     last_run_time = datetime.now(timezone.utc)
-    
-    logger.info("Starting retention cleanup job. Max retention: %s days", retention_days)
+
+    logger.info(
+        "Starting retention cleanup job. Max retention: %s days", retention_days
+    )
 
     # 1. Cleanup snapshot files
     deleted_snapshots = 0
@@ -40,7 +42,9 @@ def run_retention_cleanup(retention_days: int, snapshot_dir: Path) -> dict:
                         os.remove(file_path)
                         deleted_snapshots += 1
                 except Exception as exc:
-                    logger.error("Failed to delete snapshot file %s: %s", file_path, exc)
+                    logger.error(
+                        "Failed to delete snapshot file %s: %s", file_path, exc
+                    )
 
     # 2. Cleanup DB Event records
     deleted_db_records = 0
@@ -52,9 +56,17 @@ def run_retention_cleanup(retention_days: int, snapshot_dir: Path) -> dict:
     db = SessionLocal()
     try:
         # Delete Event records older than threshold
-        deleted_db_records = db.query(Event).filter(Event.timestamp < cutoff_db).delete(synchronize_session=False)
+        deleted_db_records = (
+            db.query(Event)
+            .filter(Event.timestamp < cutoff_db)
+            .delete(synchronize_session=False)
+        )
         commit_with_retry(db)
-        logger.info("Retention cleanup: deleted %s snapshots, %s event records", deleted_snapshots, deleted_db_records)
+        logger.info(
+            "Retention cleanup: deleted %s snapshots, %s event records",
+            deleted_snapshots,
+            deleted_db_records,
+        )
     except Exception as exc:
         logger.error("Failed to execute DB retention cleanup: %s", exc)
         db.rollback()
@@ -63,7 +75,7 @@ def run_retention_cleanup(retention_days: int, snapshot_dir: Path) -> dict:
 
     return {
         "deleted_snapshots": deleted_snapshots,
-        "deleted_event_records": deleted_db_records
+        "deleted_event_records": deleted_db_records,
     }
 
 
@@ -79,17 +91,19 @@ def start_scheduler() -> BackgroundScheduler:
     global scheduler
     if scheduler is None:
         scheduler = BackgroundScheduler()
-        
+
         # Register daily at 02:00 local time
         scheduler.add_job(
             func=scheduler_job_wrapper,
             trigger=CronTrigger(hour=2, minute=0),
             id="retention_cleanup",
             name="Daily retention cleanup job",
-            replace_existing=True
+            replace_existing=True,
         )
         scheduler.start()
-        logger.info("APScheduler initialized and daily retention cleanup job registered.")
+        logger.info(
+            "APScheduler initialized and daily retention cleanup job registered."
+        )
     return scheduler
 
 

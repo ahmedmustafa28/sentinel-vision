@@ -16,10 +16,12 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 templates = Jinja2Templates(directory=str(settings.resolved_templates_dir))
 
+
 def _get_unread_count() -> int:
     try:
         from app.db.crud_notification import get_unread_notification_count
         from app.db.session import SessionLocal
+
         db = SessionLocal()
         try:
             return get_unread_notification_count(db)
@@ -29,6 +31,7 @@ def _get_unread_count() -> int:
             db.close()
     except Exception:
         return 0
+
 
 templates.env.globals["get_unread_notifications_count"] = _get_unread_count
 
@@ -40,10 +43,12 @@ async def lifespan(app: FastAPI):
     camera_registry = CameraRegistry()
 
     from app.services.surveillance_processor import SurveillanceProcessor
+
     surveillance_processor = SurveillanceProcessor(camera_registry)
     surveillance_processor.start()
 
     from app.jobs.retention_job import start_scheduler, stop_scheduler
+
     scheduler = start_scheduler()
 
     app.state.settings = settings
@@ -55,6 +60,7 @@ async def lifespan(app: FastAPI):
     yield
 
     from app.services.alert_throttle import AlertThrottle
+
     AlertThrottle().stop()
     surveillance_processor.stop()
     camera_registry.stop_all()
@@ -69,7 +75,11 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    app.mount("/static", StaticFiles(directory=str(settings.resolved_static_dir)), name="static")
+    app.mount(
+        "/static",
+        StaticFiles(directory=str(settings.resolved_static_dir)),
+        name="static",
+    )
     app.include_router(api_router)
 
     return app
@@ -77,5 +87,9 @@ def create_app() -> FastAPI:
 
 app = create_app()
 
-from app.core.auth import UnauthenticatedException, unauthenticated_exception_handler
+from app.core.auth import (
+    UnauthenticatedException,
+    unauthenticated_exception_handler,
+)  # noqa: E402
+
 app.add_exception_handler(UnauthenticatedException, unauthenticated_exception_handler)

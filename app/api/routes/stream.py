@@ -50,10 +50,10 @@ def _stream_generator(
         frame = None
         if surveillance_processor is not None and camera_id is not None:
             frame = surveillance_processor.get_latest_annotated_frame(camera_id)
-        
+
         if frame is None:
             frame = manager.get_latest_frame(copy=False)
-            
+
         if frame is None:
             frame = _placeholder_frame()
 
@@ -63,10 +63,7 @@ def _stream_generator(
             time.sleep(frame_interval)
             continue
 
-        yield (
-            b"--frame\r\n"
-            b"Content-Type: image/jpeg\r\n\r\n" + jpeg + b"\r\n"
-        )
+        yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + jpeg + b"\r\n")
 
         time.sleep(frame_interval)
 

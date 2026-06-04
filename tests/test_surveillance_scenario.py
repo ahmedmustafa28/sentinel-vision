@@ -2,7 +2,6 @@ import time
 import pytest
 import numpy as np
 import logging
-from datetime import datetime, timezone
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -11,9 +10,7 @@ from fastapi.testclient import TestClient
 from app.models.base import Base
 from app.db.crud_camera import create_camera
 from app.db.crud_event import list_events
-from app.db.crud_notification import list_notifications, get_unread_notification_count
 from app.services.event_engine import EventEngine
-from app.services.notification_service import NotificationService
 from app.main import app
 
 # Setup isolated in-memory SQLite for end-to-end integration scenario
@@ -47,6 +44,7 @@ def test_surveillance_e2e_scenario(db_session, monkeypatch):
     4. Verify SQLite event logs and notifications persistence.
     5. Verify dashboard REST API updates unread counters correctly.
     """
+
     # 1. Setup mocks & settings
     class MockSettings:
         enable_email_alerts = True
@@ -102,7 +100,7 @@ def test_surveillance_e2e_scenario(db_session, monkeypatch):
 
     # --- SIMULATION 1: Person Entry (Restricted Zone Alert) ---
     # Trigger person detection on restricted camera
-    events_lobby = event_engine.process_frame(
+    event_engine.process_frame(
         camera_id=camera.id,
         frame=dummy_frame,
         detections=[
@@ -126,7 +124,7 @@ def test_surveillance_e2e_scenario(db_session, monkeypatch):
 
     # --- SIMULATION 2: Unknown Face Detection ---
     # Trigger unknown face detection on camera
-    events_face = event_engine.process_frame(
+    event_engine.process_frame(
         camera_id=camera.id,
         frame=dummy_frame,
         detections=[],
@@ -139,7 +137,7 @@ def test_surveillance_e2e_scenario(db_session, monkeypatch):
             }
         ],
     )
-    
+
     events_db_after_face = list_events(db_session, camera_id=camera.id)
     assert "unknown_person_detected" in {e.event_type for e in events_db_after_face}
 
@@ -149,7 +147,7 @@ def test_surveillance_e2e_scenario(db_session, monkeypatch):
     # Step A: Register the laptop as visible in Lobby
     mock_now = time.time()
     monkeypatch.setattr("time.time", lambda: mock_now)
-    
+
     event_engine.process_frame(
         camera_id=camera.id,
         frame=dummy_frame,
@@ -184,15 +182,15 @@ def test_surveillance_e2e_scenario(db_session, monkeypatch):
     app.dependency_overrides[get_db_session] = override_get_db
     try:
         client = TestClient(app)
-        
+
         # Poll the unread alerts dashboard API
         response = client.get("/api/notifications/unread")
         assert response.status_code == 200
-        
+
         data = response.json()
         assert "unread_count" in data
         assert "latest_alerts" in data
-        
+
         # Verify that unread notifications are populated and correctly mapped
         assert data["unread_count"] > 0
         latest_msgs = [n["message"] for n in data["latest_alerts"]]

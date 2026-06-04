@@ -14,11 +14,14 @@ class CameraBase(BaseModel):
     @classmethod
     def validate_source(cls, v: str) -> str:
         from app.core.validators import validate_camera_source
+
         try:
             res = validate_camera_source(v)
             return str(res)
         except ValueError as exc:
-            raise ValueError("Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed") from exc
+            raise ValueError(
+                "Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed"
+            ) from exc
 
 
 class CameraCreate(CameraBase):
@@ -38,11 +41,14 @@ class CameraUpdate(BaseModel):
         if v is None:
             return v
         from app.core.validators import validate_camera_source
+
         try:
             res = validate_camera_source(v)
             return str(res)
         except ValueError as exc:
-            raise ValueError("Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed") from exc
+            raise ValueError(
+                "Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed"
+            ) from exc
 
 
 class CameraResponse(BaseModel):

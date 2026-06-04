@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta, timezone
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, Request, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError
+import jwt
+from jwt.exceptions import PyJWTError as JWTError
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
@@ -22,6 +23,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 class UnauthenticatedException(Exception):
     """Custom exception raised when a user is not authenticated."""
+
     pass
 
 
@@ -41,7 +43,9 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(
+            minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+        )
     to_encode.update({"exp": int(expire.timestamp())})
     encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=ALGORITHM)
     return encoded_jwt
@@ -49,7 +53,10 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
 
 def is_token_blacklisted(db: Session, token: str) -> bool:
     """Checks if a token has been blacklisted."""
-    return db.query(BlacklistedToken).filter(BlacklistedToken.token == token).first() is not None
+    return (
+        db.query(BlacklistedToken).filter(BlacklistedToken.token == token).first()
+        is not None
+    )
 
 
 def blacklist_token(db: Session, token: str, expires_at: datetime) -> None:
@@ -58,11 +65,11 @@ def blacklist_token(db: Session, token: str, expires_at: datetime) -> None:
         # Convert expires_at to naive UTC datetime if it contains timezone info
         if expires_at.tzinfo is not None:
             expires_at = expires_at.astimezone(timezone.utc).replace(tzinfo=None)
-            
+
         # Expiry cleanup to prevent DB bloating (done here since it's already a write transaction)
         now = datetime.now(timezone.utc).replace(tzinfo=None)
         db.query(BlacklistedToken).filter(BlacklistedToken.expires_at < now).delete()
-        
+
         blacklisted = BlacklistedToken(token=token, expires_at=expires_at)
         db.add(blacklisted)
         db.commit()
@@ -91,7 +98,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db_session)) ->
     """
     token = None
     auth_header = request.headers.get("Authorization")
-    
+
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
     else:
@@ -131,11 +138,13 @@ def unauthenticated_exception_handler(request: Request, exc: UnauthenticatedExce
 
     if path.startswith("/api/") or "text/html" not in accept_header:
         from fastapi.responses import JSONResponse
+
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"detail": "Not authenticated"}
+            content={"detail": "Not authenticated"},
         )
 
     from fastapi.responses import RedirectResponse
+
     # Redirect HTML pages to login path
     return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)

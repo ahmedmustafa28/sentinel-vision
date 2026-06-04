@@ -39,7 +39,9 @@ class AIAnalystService:
         settings = get_settings()
 
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._ollama_base_url = (ollama_base_url or settings.ollama_base_url).rstrip("/")
+        self._ollama_base_url = (ollama_base_url or settings.ollama_base_url).rstrip(
+            "/"
+        )
         self._model_name = model_name or settings.ollama_model
         self._temperature = (
             max(0.0, min(1.0, temperature))
@@ -49,7 +51,9 @@ class AIAnalystService:
         self._timeout_seconds = max(5.0, timeout_seconds)
 
         resolved_output_dir = (
-            Path(output_dir) if output_dir is not None else (BASE_DIR / settings.report_output_dir)
+            Path(output_dir)
+            if output_dir is not None
+            else (BASE_DIR / settings.report_output_dir)
         )
         self._output_dir = resolved_output_dir.resolve()
         self._output_dir.mkdir(parents=True, exist_ok=True)
@@ -82,27 +86,34 @@ class AIAnalystService:
         try:
             timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
             out_path = self._output_dir / f"ai_analyst_{timestamp}.json"
-            out_path.write_text(json.dumps({"input_events": sanitized, "analysis": result}, indent=2), encoding="utf-8")
+            out_path.write_text(
+                json.dumps({"input_events": sanitized, "analysis": result}, indent=2),
+                encoding="utf-8",
+            )
         except Exception:
             self._logger.exception("Failed to save analyst output file")
 
         return result
 
-    def _load_events_from_db(self, db: Session, since: datetime | None = None) -> list[dict]:
+    def _load_events_from_db(
+        self, db: Session, since: datetime | None = None
+    ) -> list[dict]:
         # Use crud_event.list_events to fetch recent events; translate to dicts
         events = crud_event.list_events(db, skip=0, limit=500)
         results = []
         for e in events:
             if since is not None and e.timestamp is not None and e.timestamp < since:
                 continue
-            results.append({
-                "id": int(e.id),
-                "timestamp": e.timestamp.isoformat() if e.timestamp else None,
-                "event_type": e.event_type,
-                "description": e.description,
-                "camera_id": e.camera_id,
-                "image_path": e.image_path,
-            })
+            results.append(
+                {
+                    "id": int(e.id),
+                    "timestamp": e.timestamp.isoformat() if e.timestamp else None,
+                    "event_type": e.event_type,
+                    "description": e.description,
+                    "camera_id": e.camera_id,
+                    "image_path": e.image_path,
+                }
+            )
         return results
 
     def _format_event_short(self, event: dict) -> str:
@@ -125,7 +136,9 @@ class AIAnalystService:
             "Output MUST be valid JSON only, nothing else.\n\n"
         )
 
-        events_block = "\n".join(f"- {e}" for e in events) if events else "- No events provided"
+        events_block = (
+            "\n".join(f"- {e}" for e in events) if events else "- No events provided"
+        )
 
         prompt = header + "Event Log:\n" + events_block + "\n"
         return prompt
@@ -165,7 +178,9 @@ class AIAnalystService:
                 parsed = json.loads(snippet)
                 return self._normalize_output(parsed)
             except Exception:
-                self._logger.exception("Failed to parse JSON from model response. Raw: %s", text[:1000])
+                self._logger.exception(
+                    "Failed to parse JSON from model response. Raw: %s", text[:1000]
+                )
                 return self._fallback_analysis(prompt)
 
     def _normalize_output(self, parsed: dict[str, Any]) -> dict[str, Any]:
@@ -173,7 +188,6 @@ class AIAnalystService:
         risk_level = str(parsed.get("risk_level", "Low")).title()
         if risk_level not in {"Low", "Medium", "High"}:
             # map common variants
-            low = {"low", "low risk"}
             med = {"medium", "moderate", "medium risk"}
             high = {"high", "high risk", "severe"}
             r = str(parsed.get("risk_level", "")).lower()
@@ -196,7 +210,8 @@ class AIAnalystService:
             "risk_score": score,
             "summary": str(parsed.get("summary", "")) or "No summary provided.",
             "reasoning": str(parsed.get("reasoning", "")) or "No reasoning provided.",
-            "recommended_action": str(parsed.get("recommended_action", "")) or "No recommended action provided.",
+            "recommended_action": str(parsed.get("recommended_action", ""))
+            or "No recommended action provided.",
         }
 
     def _fallback_analysis(self, prompt: str) -> dict[str, Any]:

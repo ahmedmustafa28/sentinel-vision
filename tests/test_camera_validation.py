@@ -1,16 +1,15 @@
 import pytest
-from datetime import datetime, timezone
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 
 from app.models.base import Base
-from app.models.camera import Camera
-from app.db.crud_camera import create_camera, get_camera_by_id
+from app.db.crud_camera import create_camera
 from app.core.validators import validate_camera_source
 from app.main import app
 
 from sqlalchemy.pool import StaticPool
+
 TEST_SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(
     TEST_SQLALCHEMY_DATABASE_URL,
@@ -45,13 +44,25 @@ def test_validate_camera_source_unit(monkeypatch):
     class MockSettingsDefault:
         allow_local_rtsp = False
 
-    monkeypatch.setattr("app.core.validators.get_settings", lambda: MockSettingsDefault())
+    monkeypatch.setattr(
+        "app.core.validators.get_settings", lambda: MockSettingsDefault()
+    )
 
     # 1. Valid inputs
-    assert validate_camera_source("rtsp://example.com/live") == "rtsp://example.com/live"
-    assert validate_camera_source("rtsps://example.com/live") == "rtsps://example.com/live"
-    assert validate_camera_source("http://mjpeg.example.com/stream.mjpg") == "http://mjpeg.example.com/stream.mjpg"
-    assert validate_camera_source("https://mjpeg.example.com/stream.mjpg") == "https://mjpeg.example.com/stream.mjpg"
+    assert (
+        validate_camera_source("rtsp://example.com/live") == "rtsp://example.com/live"
+    )
+    assert (
+        validate_camera_source("rtsps://example.com/live") == "rtsps://example.com/live"
+    )
+    assert (
+        validate_camera_source("http://mjpeg.example.com/stream.mjpg")
+        == "http://mjpeg.example.com/stream.mjpg"
+    )
+    assert (
+        validate_camera_source("https://mjpeg.example.com/stream.mjpg")
+        == "https://mjpeg.example.com/stream.mjpg"
+    )
     assert validate_camera_source(0) == 0
     assert validate_camera_source("1") == 1
 
@@ -73,17 +84,28 @@ def test_validate_camera_source_unit(monkeypatch):
     class MockSettingsAllowLocal:
         allow_local_rtsp = True
 
-    monkeypatch.setattr("app.core.validators.get_settings", lambda: MockSettingsAllowLocal())
-    assert validate_camera_source("rtsp://192.168.1.1/stream") == "rtsp://192.168.1.1/stream"
-    assert validate_camera_source("rtsp://localhost/stream") == "rtsp://localhost/stream"
-    assert validate_camera_source("rtsp://127.0.0.1/stream") == "rtsp://127.0.0.1/stream"
+    monkeypatch.setattr(
+        "app.core.validators.get_settings", lambda: MockSettingsAllowLocal()
+    )
+    assert (
+        validate_camera_source("rtsp://192.168.1.1/stream")
+        == "rtsp://192.168.1.1/stream"
+    )
+    assert (
+        validate_camera_source("rtsp://localhost/stream") == "rtsp://localhost/stream"
+    )
+    assert (
+        validate_camera_source("rtsp://127.0.0.1/stream") == "rtsp://127.0.0.1/stream"
+    )
 
 
 def test_api_camera_create_and_validation(client, monkeypatch):
     class MockSettingsDefault:
         allow_local_rtsp = False
 
-    monkeypatch.setattr("app.core.validators.get_settings", lambda: MockSettingsDefault())
+    monkeypatch.setattr(
+        "app.core.validators.get_settings", lambda: MockSettingsDefault()
+    )
 
     # Create valid camera via REST API
     payload = {
@@ -91,7 +113,7 @@ def test_api_camera_create_and_validation(client, monkeypatch):
         "source_url": "rtsp://example.com/stream",
         "location": "Lobby",
         "is_active": True,
-        "is_restricted": False
+        "is_restricted": False,
     }
     response = client.post("/cameras", json=payload)
     assert response.status_code == 201
@@ -104,7 +126,7 @@ def test_api_camera_create_and_validation(client, monkeypatch):
     payload_invalid_scheme = {
         "name": "Invalid Cam",
         "source_url": "file:///tmp/stream",
-        "location": "Server Room"
+        "location": "Server Room",
     }
     response = client.post("/cameras", json=payload_invalid_scheme)
     assert response.status_code == 422
@@ -114,7 +136,7 @@ def test_api_camera_create_and_validation(client, monkeypatch):
     # Create invalid camera (rejected private IP) -> expects 422
     payload_invalid_ip = {
         "name": "Local Cam",
-        "source_url": "rtsp://192.168.1.100/stream"
+        "source_url": "rtsp://192.168.1.100/stream",
     }
     response = client.post("/cameras", json=payload_invalid_ip)
     assert response.status_code == 422
@@ -124,7 +146,9 @@ def test_api_camera_update_and_validation(db_session, client, monkeypatch):
     class MockSettingsDefault:
         allow_local_rtsp = False
 
-    monkeypatch.setattr("app.core.validators.get_settings", lambda: MockSettingsDefault())
+    monkeypatch.setattr(
+        "app.core.validators.get_settings", lambda: MockSettingsDefault()
+    )
 
     # Pre-populate a camera in DB
     camera = create_camera(
@@ -133,13 +157,13 @@ def test_api_camera_update_and_validation(db_session, client, monkeypatch):
         source_url="rtsp://public-stream.com/feed",
         location="Front",
         is_active=True,
-        is_restricted=False
+        is_restricted=False,
     )
 
     # Update camera with valid data
     update_payload = {
         "name": "New Name",
-        "source_url": "rtsp://updated-public-stream.com/feed"
+        "source_url": "rtsp://updated-public-stream.com/feed",
     }
     response = client.put(f"/cameras/{camera.id}", json=update_payload)
     assert response.status_code == 200
@@ -148,9 +172,7 @@ def test_api_camera_update_and_validation(db_session, client, monkeypatch):
     assert data["source_url"] == "rtsp://updated-public-stream.com/feed"
 
     # Update camera with invalid source_url (rejected file:// scheme)
-    invalid_update_payload = {
-        "source_url": "file:///var/log"
-    }
+    invalid_update_payload = {"source_url": "file:///var/log"}
     response = client.put(f"/cameras/{camera.id}", json=invalid_update_payload)
     assert response.status_code == 422
     error_msg = response.json()["detail"][0]["msg"]

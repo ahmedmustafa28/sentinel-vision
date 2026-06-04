@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Form, Response, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Response, Request, status
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db_session
@@ -9,7 +9,7 @@ from app.core.auth import (
     create_access_token,
     blacklist_token,
     get_token_expiry,
-    ACCESS_TOKEN_EXPIRE_MINUTES
+    ACCESS_TOKEN_EXPIRE_MINUTES,
 )
 
 router = APIRouter()
@@ -23,15 +23,18 @@ def login_page(request: Request, db: Session = Depends(get_db_session)):
     should_delete_cookie = False
     if token:
         try:
-            from jose import jwt
+            import jwt
             from app.core.auth import ALGORITHM, settings, is_token_blacklisted
+
             payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
             username = payload.get("sub")
             if username and not is_token_blacklisted(db, token):
                 # Also verify the user still exists in the DB
                 user = db.query(User).filter(User.username == username).first()
                 if user:
-                    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+                    return RedirectResponse(
+                        url="/", status_code=status.HTTP_303_SEE_OTHER
+                    )
             should_delete_cookie = True
         except Exception:
             should_delete_cookie = True
@@ -49,9 +52,7 @@ def login_page(request: Request, db: Session = Depends(get_db_session)):
 
 @router.post("/auth/login", summary="Validate credentials and issue JWT")
 async def login(
-    request: Request,
-    response: Response,
-    db: Session = Depends(get_db_session)
+    request: Request, response: Response, db: Session = Depends(get_db_session)
 ):
     """
     Validates username and password and returns a JWT access token.
@@ -75,14 +76,16 @@ async def login(
         password = form.get("password")
 
     if not username or not password:
-        raise HTTPException(status_code=400, detail="Username and password are required")
+        raise HTTPException(
+            status_code=400, detail="Username and password are required"
+        )
 
     # Fetch user from DB
     user = db.query(User).filter(User.username == username).first()
     if not user or not verify_password(password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password"
+            detail="Invalid username or password",
         )
 
     # Generate JWT access token
@@ -102,20 +105,16 @@ async def login(
         "access_token": token,
         "token_type": "bearer",
         "role": user.role,
-        "username": user.username
+        "username": user.username,
     }
 
 
 @router.post("/auth/logout", summary="Logout and blacklist token")
-def logout(
-    request: Request,
-    response: Response,
-    db: Session = Depends(get_db_session)
-):
+def logout(request: Request, response: Response, db: Session = Depends(get_db_session)):
     """Logs out the user by blacklisting their current token and deleting their cookie."""
     token = None
     auth_header = request.headers.get("Authorization")
-    
+
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
     else:
@@ -131,9 +130,7 @@ def logout(
 
 @router.get("/logout", summary="Logout redirect helper for browser anchor tags")
 def logout_redirect(
-    request: Request,
-    response: Response,
-    db: Session = Depends(get_db_session)
+    request: Request, response: Response, db: Session = Depends(get_db_session)
 ):
     """Redirect endpoint that clears cookies and blacklists the token on browser logout."""
     token = request.cookies.get("access_token")
@@ -141,6 +138,8 @@ def logout_redirect(
         expires_at = get_token_expiry(token)
         blacklist_token(db, token, expires_at)
 
-    redirect_response = RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+    redirect_response = RedirectResponse(
+        url="/login", status_code=status.HTTP_303_SEE_OTHER
+    )
     redirect_response.delete_cookie("access_token")
     return redirect_response

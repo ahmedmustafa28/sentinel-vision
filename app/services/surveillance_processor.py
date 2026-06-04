@@ -1,7 +1,6 @@
 import logging
 import threading
 import time
-from typing import Any
 import cv2
 import numpy as np
 
@@ -25,13 +24,19 @@ class SurveillanceProcessor:
         try:
             self._detection_service = DetectionService()
         except Exception as exc:
-            self._logger.error("Failed to load DetectionService. Visual features will be disabled: %s", exc)
+            self._logger.error(
+                "Failed to load DetectionService. Visual features will be disabled: %s",
+                exc,
+            )
             self._detection_service = None
 
         try:
             self._face_recognition_service = FaceRecognitionService()
         except Exception as exc:
-            self._logger.error("Failed to load FaceRecognitionService. Face alerts will be disabled: %s", exc)
+            self._logger.error(
+                "Failed to load FaceRecognitionService. Face alerts will be disabled: %s",
+                exc,
+            )
             self._face_recognition_service = None
 
         self._event_engine = EventEngine(db_session_factory=SessionLocal)
@@ -84,7 +89,10 @@ class SurveillanceProcessor:
                     cameras = list_cameras(db, limit=1000)
                     active_cameras = [cam for cam in cameras if cam.is_active]
                 except Exception as db_exc:
-                    self._logger.error("Database connection or read error in surveillance loop: %s", db_exc)
+                    self._logger.error(
+                        "Database connection or read error in surveillance loop: %s",
+                        db_exc,
+                    )
                     active_cameras = []
                 finally:
                     db.close()
@@ -108,7 +116,11 @@ class SurveillanceProcessor:
                         manager = self._camera_registry.get_or_create(camera.source_url)
                         frame = manager.get_latest_frame(copy=True)
                     except Exception as cam_exc:
-                        self._logger.error("Failed to retrieve frame from camera %s: %s", camera.id, cam_exc)
+                        self._logger.error(
+                            "Failed to retrieve frame from camera %s: %s",
+                            camera.id,
+                            cam_exc,
+                        )
                         continue
 
                     if frame is None:
@@ -116,9 +128,15 @@ class SurveillanceProcessor:
 
                     # 2. Check for motion before executing neural network inferences and pipeline
                     try:
-                        motion_detected = self._event_engine._is_motion_detected(camera.id, frame)
+                        motion_detected = self._event_engine._is_motion_detected(
+                            camera.id, frame
+                        )
                     except Exception as motion_exc:
-                        self._logger.error("Motion detection calculation failed on camera %s: %s", camera.id, motion_exc)
+                        self._logger.error(
+                            "Motion detection calculation failed on camera %s: %s",
+                            camera.id,
+                            motion_exc,
+                        )
                         motion_detected = True  # Fallback to True to ensure we don't miss alerts on error
 
                     annotated = frame.copy()
@@ -131,20 +149,38 @@ class SurveillanceProcessor:
                         # Run YOLO Object Detection
                         if self._detection_service is not None:
                             try:
-                                annotated, detections = self._detection_service.process_frame(annotated)
+                                annotated, detections = (
+                                    self._detection_service.process_frame(annotated)
+                                )
                             except Exception as exc:
-                                self._logger.error("YOLO prediction failure on camera %s: %s", camera.id, exc)
+                                self._logger.error(
+                                    "YOLO prediction failure on camera %s: %s",
+                                    camera.id,
+                                    exc,
+                                )
 
                         # Run Face Recognition
                         if self._face_recognition_service is not None:
                             try:
-                                faces = self._face_recognition_service.recognize_faces(frame)
-                                annotated = self._face_recognition_service.annotate_faces(annotated, faces)
+                                faces = self._face_recognition_service.recognize_faces(
+                                    frame
+                                )
+                                annotated = (
+                                    self._face_recognition_service.annotate_faces(
+                                        annotated, faces
+                                    )
+                                )
                                 unknown_person_detected = any(
-                                    str(face.get("name", "Unknown")).strip().lower() == "unknown" for face in faces
+                                    str(face.get("name", "Unknown")).strip().lower()
+                                    == "unknown"
+                                    for face in faces
                                 )
                             except Exception as exc:
-                                self._logger.error("Face recognition failure on camera %s: %s", camera.id, exc)
+                                self._logger.error(
+                                    "Face recognition failure on camera %s: %s",
+                                    camera.id,
+                                    exc,
+                                )
 
                         # Process Event logic
                         try:
@@ -156,7 +192,11 @@ class SurveillanceProcessor:
                                 recognized_faces=faces,
                             )
                         except Exception as exc:
-                            self._logger.error("Event engine processing failure on camera %s: %s", camera.id, exc)
+                            self._logger.error(
+                                "Event engine processing failure on camera %s: %s",
+                                camera.id,
+                                exc,
+                            )
                     else:
                         # Low-CPU standby state, carry over previous overlay if available, otherwise draw standby banner
                         with self._lock:
@@ -185,5 +225,7 @@ class SurveillanceProcessor:
                 time.sleep(sleep_time)
 
             except Exception as exc:
-                self._logger.exception("Unhandled exception in surveillance processing loop: %s", exc)
+                self._logger.exception(
+                    "Unhandled exception in surveillance processing loop: %s", exc
+                )
                 time.sleep(1.0)

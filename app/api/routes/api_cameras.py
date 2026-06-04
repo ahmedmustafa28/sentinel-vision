@@ -8,7 +8,12 @@ from app.schemas.camera import CameraCreate, CameraUpdate, CameraResponse
 router = APIRouter()
 
 
-@router.post("/cameras", response_model=CameraResponse, status_code=status.HTTP_201_CREATED, summary="Create a new camera")
+@router.post(
+    "/cameras",
+    response_model=CameraResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new camera",
+)
 def api_create_camera(camera_in: CameraCreate, db: Session = Depends(get_db_session)):
     """Creates a new camera after validation."""
     camera = create_camera(
@@ -17,17 +22,27 @@ def api_create_camera(camera_in: CameraCreate, db: Session = Depends(get_db_sess
         source_url=camera_in.source_url,
         location=camera_in.location,
         is_active=camera_in.is_active if camera_in.is_active is not None else True,
-        is_restricted=camera_in.is_restricted if camera_in.is_restricted is not None else False,
+        is_restricted=(
+            camera_in.is_restricted if camera_in.is_restricted is not None else False
+        ),
     )
     return camera
 
 
-@router.put("/cameras/{camera_id}", response_model=CameraResponse, summary="Update an existing camera")
-def api_update_camera(camera_id: int, camera_in: CameraUpdate, db: Session = Depends(get_db_session)):
+@router.put(
+    "/cameras/{camera_id}",
+    response_model=CameraResponse,
+    summary="Update an existing camera",
+)
+def api_update_camera(
+    camera_id: int, camera_in: CameraUpdate, db: Session = Depends(get_db_session)
+):
     """Updates an existing camera's configurations after validation."""
     camera = get_camera_by_id(db, camera_id)
     if not camera:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Camera not found"
+        )
 
     updated = update_camera(
         db,

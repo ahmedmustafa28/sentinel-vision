@@ -5,9 +5,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.models.base import Base
-from app.models.camera import Camera
-from app.models.event import Event
-from app.models.notification import Notification
 from app.db.crud_camera import create_camera
 from app.db.crud_event import create_event
 from app.db.crud_notification import create_notification
@@ -15,6 +12,7 @@ from app.services.alert_throttle import AlertThrottle
 from app.services.notification_service import NotificationService
 
 from sqlalchemy.pool import StaticPool
+
 TEST_SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(
     TEST_SQLALCHEMY_DATABASE_URL,
@@ -57,20 +55,26 @@ def test_alert_throttle_cooldown(db_session, monkeypatch):
         alert_cooldown_seconds = 1
         alert_digest_minutes = 0
 
-    monkeypatch.setattr("app.services.alert_throttle.get_settings", lambda: MockSettings())
-    monkeypatch.setattr("app.services.notification_service.get_settings", lambda: MockSettings())
+    monkeypatch.setattr(
+        "app.services.alert_throttle.get_settings", lambda: MockSettings()
+    )
+    monkeypatch.setattr(
+        "app.services.notification_service.get_settings", lambda: MockSettings()
+    )
 
-    camera = create_camera(db_session, name="Test Cam", source_url="0", location="Lobby")
-    
+    camera = create_camera(
+        db_session, name="Test Cam", source_url="0", location="Lobby"
+    )
+
     throttle = AlertThrottle()
-    
+
     # First alert should fire immediately
     fired1 = throttle.should_fire(
         camera_id=camera.id,
         camera_name=camera.name,
         event_type="unknown_person_detected",
         notification_id=1,
-        event_time=datetime.now(timezone.utc)
+        event_time=datetime.now(timezone.utc),
     )
     assert fired1 is True
 
@@ -80,7 +84,7 @@ def test_alert_throttle_cooldown(db_session, monkeypatch):
         camera_name=camera.name,
         event_type="unknown_person_detected",
         notification_id=2,
-        event_time=datetime.now(timezone.utc)
+        event_time=datetime.now(timezone.utc),
     )
     assert fired2 is False
 
@@ -93,7 +97,7 @@ def test_alert_throttle_cooldown(db_session, monkeypatch):
         camera_name=camera.name,
         event_type="unknown_person_detected",
         notification_id=3,
-        event_time=datetime.now(timezone.utc)
+        event_time=datetime.now(timezone.utc),
     )
     assert fired3 is True
 
@@ -110,29 +114,59 @@ def test_alert_throttle_independent_keys(db_session, monkeypatch):
         alert_cooldown_seconds = 10
         alert_digest_minutes = 0
 
-    monkeypatch.setattr("app.services.alert_throttle.get_settings", lambda: MockSettings())
+    monkeypatch.setattr(
+        "app.services.alert_throttle.get_settings", lambda: MockSettings()
+    )
 
     throttle = AlertThrottle()
 
     # Camera 1, Type A fires
-    assert throttle.should_fire(
-        camera_id=1, camera_name="Cam1", event_type="type_a", notification_id=1, event_time=datetime.now(timezone.utc)
-    ) is True
+    assert (
+        throttle.should_fire(
+            camera_id=1,
+            camera_name="Cam1",
+            event_type="type_a",
+            notification_id=1,
+            event_time=datetime.now(timezone.utc),
+        )
+        is True
+    )
 
     # Camera 1, Type A suppressed (cooldown active)
-    assert throttle.should_fire(
-        camera_id=1, camera_name="Cam1", event_type="type_a", notification_id=2, event_time=datetime.now(timezone.utc)
-    ) is False
+    assert (
+        throttle.should_fire(
+            camera_id=1,
+            camera_name="Cam1",
+            event_type="type_a",
+            notification_id=2,
+            event_time=datetime.now(timezone.utc),
+        )
+        is False
+    )
 
     # Camera 1, Type B fires (different event type)
-    assert throttle.should_fire(
-        camera_id=1, camera_name="Cam1", event_type="type_b", notification_id=3, event_time=datetime.now(timezone.utc)
-    ) is True
+    assert (
+        throttle.should_fire(
+            camera_id=1,
+            camera_name="Cam1",
+            event_type="type_b",
+            notification_id=3,
+            event_time=datetime.now(timezone.utc),
+        )
+        is True
+    )
 
     # Camera 2, Type A fires (different camera)
-    assert throttle.should_fire(
-        camera_id=2, camera_name="Cam2", event_type="type_a", notification_id=4, event_time=datetime.now(timezone.utc)
-    ) is True
+    assert (
+        throttle.should_fire(
+            camera_id=2,
+            camera_name="Cam2",
+            event_type="type_a",
+            notification_id=4,
+            event_time=datetime.now(timezone.utc),
+        )
+        is True
+    )
 
 
 def test_alert_throttle_digest(db_session, monkeypatch):
@@ -147,54 +181,87 @@ def test_alert_throttle_digest(db_session, monkeypatch):
         alert_cooldown_seconds = 10
         alert_digest_minutes = 5
 
-    monkeypatch.setattr("app.services.alert_throttle.get_settings", lambda: MockSettings())
-    monkeypatch.setattr("app.services.notification_service.get_settings", lambda: MockSettings())
+    monkeypatch.setattr(
+        "app.services.alert_throttle.get_settings", lambda: MockSettings()
+    )
+    monkeypatch.setattr(
+        "app.services.notification_service.get_settings", lambda: MockSettings()
+    )
 
     # Redirect DB session in AlertThrottle to our TestingSessionLocal
     monkeypatch.setattr("app.db.session.SessionLocal", TestingSessionLocal)
 
     email_sent_calls = []
+
     def mock_send_email_alert(self, subject, body):
         email_sent_calls.append((subject, body))
         return True
 
     monkeypatch.setattr(NotificationService, "_send_email_alert", mock_send_email_alert)
 
-    camera = create_camera(db_session, name="Lobby Gate", source_url="0", location="Lobby")
-    event = create_event(db_session, event_type="restricted_area_entered", camera_id=camera.id)
-    
-    n1 = create_notification(db_session, event_id=event.id, notification_type="restricted_area_entered", message="M1")
-    n2 = create_notification(db_session, event_id=event.id, notification_type="restricted_area_entered", message="M2")
-    n3 = create_notification(db_session, event_id=event.id, notification_type="restricted_area_entered", message="M3")
+    camera = create_camera(
+        db_session, name="Lobby Gate", source_url="0", location="Lobby"
+    )
+    event = create_event(
+        db_session, event_type="restricted_area_entered", camera_id=camera.id
+    )
+
+    n1 = create_notification(
+        db_session,
+        event_id=event.id,
+        notification_type="restricted_area_entered",
+        message="M1",
+    )
+    n2 = create_notification(
+        db_session,
+        event_id=event.id,
+        notification_type="restricted_area_entered",
+        message="M2",
+    )
+    n3 = create_notification(
+        db_session,
+        event_id=event.id,
+        notification_type="restricted_area_entered",
+        message="M3",
+    )
 
     throttle = AlertThrottle()
 
     # First fires immediately
-    assert throttle.should_fire(
-        camera_id=camera.id,
-        camera_name=camera.name,
-        event_type="restricted_area_entered",
-        notification_id=n1.id,
-        event_time=datetime.now(timezone.utc),
-    ) is True
+    assert (
+        throttle.should_fire(
+            camera_id=camera.id,
+            camera_name=camera.name,
+            event_type="restricted_area_entered",
+            notification_id=n1.id,
+            event_time=datetime.now(timezone.utc),
+        )
+        is True
+    )
 
     # Second is suppressed and batched in digest
-    assert throttle.should_fire(
-        camera_id=camera.id,
-        camera_name=camera.name,
-        event_type="restricted_area_entered",
-        notification_id=n2.id,
-        event_time=datetime.now(timezone.utc),
-    ) is False
+    assert (
+        throttle.should_fire(
+            camera_id=camera.id,
+            camera_name=camera.name,
+            event_type="restricted_area_entered",
+            notification_id=n2.id,
+            event_time=datetime.now(timezone.utc),
+        )
+        is False
+    )
 
     # Third is suppressed and batched in digest
-    assert throttle.should_fire(
-        camera_id=camera.id,
-        camera_name=camera.name,
-        event_type="restricted_area_entered",
-        notification_id=n3.id,
-        event_time=datetime.now(timezone.utc),
-    ) is False
+    assert (
+        throttle.should_fire(
+            camera_id=camera.id,
+            camera_name=camera.name,
+            event_type="restricted_area_entered",
+            notification_id=n3.id,
+            event_time=datetime.now(timezone.utc),
+        )
+        is False
+    )
 
     # Verify batch contains correct aggregation data
     key = (camera.id, "restricted_area_entered")

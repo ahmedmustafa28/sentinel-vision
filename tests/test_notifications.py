@@ -1,21 +1,15 @@
 import pytest
-from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 
 from app.models.base import Base
-from app.models.camera import Camera
-from app.models.event import Event
-from app.models.notification import Notification
 from app.db.crud_camera import create_camera
 from app.db.crud_event import create_event
 from app.db.crud_notification import (
     create_notification,
-    get_notification_by_id,
     list_notifications,
     mark_notification_as_read,
-    mark_all_notifications_as_read,
     get_unread_notification_count,
 )
 from app.services.notification_service import NotificationService
@@ -23,6 +17,7 @@ from app.main import app
 
 # In-memory SQLite for testing DB CRUDs
 from sqlalchemy.pool import StaticPool
+
 TEST_SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(
     TEST_SQLALCHEMY_DATABASE_URL,
@@ -106,20 +101,34 @@ def test_notification_service_integration(db_session, monkeypatch):
 
     # Mock SMTP send email call
     email_sent_calls = []
+
     def mock_send_email(subject, body):
         email_sent_calls.append((subject, body))
         return True
+
     monkeypatch.setattr(service, "_send_email_alert", mock_send_email)
 
     # Setup database records
-    camera = create_camera(db_session, name="Front Gate", source_url="1", location="Gate", is_restricted=True)
-    event = create_event(db_session, event_type="restricted_area_entered", camera_id=camera.id, description="Person entered")
+    camera = create_camera(
+        db_session,
+        name="Front Gate",
+        source_url="1",
+        location="Gate",
+        is_restricted=True,
+    )
+    event = create_event(
+        db_session,
+        event_type="restricted_area_entered",
+        camera_id=camera.id,
+        description="Person entered",
+    )
 
     # Run processing
     service.process_event(db_session, event)
 
     # Wait for the background email dispatch thread to complete
     import time
+
     time.sleep(0.5)
 
     # Check notification row created
@@ -139,7 +148,7 @@ def test_notification_service_integration(db_session, monkeypatch):
 
 def test_fastapi_endpoints(db_session):
     from app.api.routes.api_notifications import get_db_session
-    
+
     def override_get_db():
         db = TestingSessionLocal()
         try:
@@ -150,7 +159,7 @@ def test_fastapi_endpoints(db_session):
     app.dependency_overrides[get_db_session] = override_get_db
     try:
         client = TestClient(app)
-        
+
         # Verify unread API endpoint returns successfully
         response = client.get("/api/notifications/unread")
         assert response.status_code == 200

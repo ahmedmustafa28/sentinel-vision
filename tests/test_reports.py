@@ -74,6 +74,7 @@ def test_reports_page_and_generation(db_session):
         import glob
         import os
         from app.core.config import BASE_DIR
+
         reports_dir = (BASE_DIR / "data" / "reports").resolve()
         list_of_files = glob.glob(str(reports_dir / "*.txt"))
         assert len(list_of_files) > 0
@@ -82,4 +83,7 @@ def test_reports_page_and_generation(db_session):
         response_download = client.get(f"/reports/download/{latest_filename}")
         assert response_download.status_code == 200
         assert response_download.headers["content-type"] == "application/octet-stream"
-        assert response_download.headers["content-disposition"] == f'attachment; filename="{latest_filename}"'
+        assert (
+            response_download.headers["content-disposition"]
+            == f'attachment; filename="{latest_filename}"'
+        )
