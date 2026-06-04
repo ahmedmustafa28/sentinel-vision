@@ -50,6 +50,8 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    from app.services.alert_throttle import AlertThrottle
+    AlertThrottle().stop()
     surveillance_processor.stop()
     camera_registry.stop_all()
     logger.info("Shutting down application")

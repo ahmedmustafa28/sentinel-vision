@@ -125,6 +125,29 @@ def health_status(processor: Any = None, registry: Any = None) -> dict[str, Any]
     if not worker_running and status == "healthy":
         status = "degraded"
 
+    # Alert throttle state check
+    import time
+    from app.services.alert_throttle import AlertThrottle
+    throttle = AlertThrottle()
+    
+    current_time = time.time()
+    cooldowns_list = []
+    cooldown_seconds = throttle.settings.alert_cooldown_seconds
+    
+    for (camera_id, event_type), last_fired in list(throttle.cooldowns.items()):
+        elapsed = current_time - last_fired
+        remaining = cooldown_seconds - elapsed
+        if remaining > 0:
+            cooldowns_list.append({
+                "camera_id": camera_id,
+                "event_type": event_type,
+                "remaining_seconds": round(remaining, 2)
+            })
+            
+    checks["alert_throttle"] = {
+        "cooldowns": cooldowns_list
+    }
+
     return {
         "status": status,
         "service": settings.app_name,

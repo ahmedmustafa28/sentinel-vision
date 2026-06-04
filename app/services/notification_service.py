@@ -65,72 +65,95 @@ class NotificationService:
 
         # 2. Dispatch email asynchronously if configured to avoid blocking processing
         if self._settings.enable_email_alerts:
-            import threading
-            import time
             from datetime import timezone, datetime
+            from app.services.alert_throttle import AlertThrottle
 
-            timestamp_str = event.timestamp.isoformat() if event.timestamp else datetime.now(timezone.utc).isoformat()
-            email_body = f"{message}\n\nTimestamp: {timestamp_str}\nCamera: {camera_name}\nLocation: {location}\n\nThis is an automated message from your AI CCTV Surveillance system."
+            throttle = AlertThrottle()
+            event_time = event.timestamp or datetime.now(timezone.utc)
+            
+            is_allowed = throttle.should_fire(
+                camera_id=event.camera_id,
+                camera_name=camera_name,
+                event_type=event.event_type,
+                notification_id=notification.id,
+                event_time=event_time,
+                description=event.description or message,
+            )
 
-            def dispatch_async(notif_id: int, body_text: str):
-                max_email_retries = 3
-                backoff_base = 2.0
-                success = False
+            if is_allowed:
+                import threading
+                import time
 
-                for attempt in range(max_email_retries + 1):
-                    try:
-                        success = self._send_email_alert(
-                            subject=subject,
-                            body=body_text,
-                        )
-                    except Exception as email_exc:
-                        self._logger.error("Exception during SMTP email send: %s", email_exc)
-                        success = False
+                timestamp_str = event_time.isoformat()
+                email_body = f"{message}\n\nTimestamp: {timestamp_str}\nCamera: {camera_name}\nLocation: {location}\n\nThis is an automated message from your AI CCTV Surveillance system."
 
-                    db_thread = self._db_session_factory()
-                    try:
-                        from app.db.crud_notification import get_notification_by_id
-                        from app.db.session import commit_with_retry
-                        notif = get_notification_by_id(db_thread, notif_id)
-                        if notif is not None:
-                            notif.retry_count = attempt
-                            if success:
-                                notif.email_sent = True
-                                notif.status = "SENT"
-                                commit_with_retry(db_thread)
-                                self._logger.info("Email alert dispatched successfully on attempt %s", attempt)
-                            else:
-                                if attempt >= max_email_retries:
-                                    notif.status = "FAILED"
+                def dispatch_async(notif_id: int, body_text: str):
+                    max_email_retries = 3
+                    backoff_base = 2.0
+                    success = False
+
+                    for attempt in range(max_email_retries + 1):
+                        try:
+                            success = self._send_email_alert(
+                                subject=subject,
+                                body=body_text,
+                            )
+                        except Exception as email_exc:
+                            self._logger.error("Exception during SMTP email send: %s", email_exc)
+                            success = False
+
+                        db_thread = self._db_session_factory()
+                        try:
+                            from app.db.crud_notification import get_notification_by_id
+                            from app.db.session import commit_with_retry
+                            notif = get_notification_by_id(db_thread, notif_id)
+                            if notif is not None:
+                                notif.retry_count = attempt
+                                if success:
+                                    notif.email_sent = True
+                                    notif.status = "SENT"
                                     commit_with_retry(db_thread)
-                                    self._logger.error("Email alert failed after maximum retries. Notification marked as FAILED.")
+                                    self._logger.info("Email alert dispatched successfully on attempt %s", attempt)
                                 else:
-                                    notif.status = "RETRIES_EXCEEDED" if attempt >= max_email_retries else "PENDING"
-                                    commit_with_retry(db_thread)
-                                    self._logger.warning("Email alert attempt %s failed", attempt)
-                    except Exception as err:
-                        self._logger.error("Failed to update database in background thread: %s", err)
-                    finally:
-                        db_thread.close()
+                                    if attempt >= max_email_retries:
+                                        notif.status = "FAILED"
+                                        commit_with_retry(db_thread)
+                                        self._logger.error("Email alert failed after maximum retries. Notification marked as FAILED.")
+                                    else:
+                                        notif.status = "RETRIES_EXCEEDED" if attempt >= max_email_retries else "PENDING"
+                                        commit_with_retry(db_thread)
+                                        self._logger.warning("Email alert attempt %s failed", attempt)
+                        except Exception as err:
+                            self._logger.error("Failed to update database in background thread: %s", err)
+                        finally:
+                            db_thread.close()
 
-                    if success:
-                        break
+                        if success:
+                            break
 
-                    # Exponential backoff delay between attempts
-                    if attempt < max_email_retries:
-                        sleep_duration = backoff_base ** attempt
-                        self._logger.info("Retrying email alert in %s seconds...", sleep_duration)
-                        time.sleep(sleep_duration)
+                        # Exponential backoff delay between attempts
+                        if attempt < max_email_retries:
+                            sleep_duration = backoff_base ** attempt
+                            self._logger.info("Retrying email alert in %s seconds...", sleep_duration)
+                            time.sleep(sleep_duration)
 
-            try:
-                threading.Thread(
-                    target=dispatch_async,
-                    args=(notification.id, email_body),
-                    name=f"alert-dispatch-{notification.id}",
-                    daemon=True
-                ).start()
-            except Exception as thread_exc:
-                self._logger.error("Failed to spawn background thread for email dispatch: %s", thread_exc)
+                try:
+                    threading.Thread(
+                        target=dispatch_async,
+                        args=(notification.id, email_body),
+                        name=f"alert-dispatch-{notification.id}",
+                        daemon=True
+                    ).start()
+                except Exception as thread_exc:
+                    self._logger.error("Failed to spawn background thread for email dispatch: %s", thread_exc)
+            else:
+                # Suppressed!
+                if self._settings.alert_digest_minutes and self._settings.alert_digest_minutes > 0:
+                    notification.status = "DIGEST_PENDING"
+                else:
+                    notification.status = "SUPPRESSED"
+                db.commit()
+                self._logger.info("Email alert suppressed due to active cooldown (event_id: %s, type: %s)", event.id, event.event_type)
 
     def _send_email_alert(self, subject: str, body: str) -> bool:
         """Sends an email alert using standard smtplib."""
