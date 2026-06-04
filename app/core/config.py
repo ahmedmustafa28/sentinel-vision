@@ -61,6 +61,7 @@ class Settings:
     alert_to_email: str
     alert_cooldown_seconds: int
     alert_digest_minutes: int | None
+    allow_local_rtsp: bool
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -101,6 +102,7 @@ class Settings:
             alert_to_email=os.getenv("ALERT_TO_EMAIL") or os.getenv("SMTP_TO_EMAIL") or "",
             alert_cooldown_seconds=_to_int(os.getenv("ALERT_COOLDOWN_SECONDS"), 60),
             alert_digest_minutes=_to_int(os.getenv("ALERT_DIGEST_MINUTES"), 0) or None,
+            allow_local_rtsp=_to_bool(os.getenv("ALLOW_LOCAL_RTSP"), False),
         )
 
     @property

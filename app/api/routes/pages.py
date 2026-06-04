@@ -129,12 +129,24 @@ def add_camera(
     location: str = Form(default=""),
     is_restricted: bool = Form(default=False),
 ):
+    from app.core.validators import validate_camera_source
+    from fastapi import HTTPException
+    
+    try:
+        validated_source = validate_camera_source(source_url)
+        source_url = str(validated_source)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid camera source: only rtsp/rtsps/http/https schemes or integer device indices are allowed"
+        )
+
     db = SessionLocal()
     try:
         create_camera(
             db,
             name=name.strip(),
-            source_url=source_url.strip(),
+            source_url=source_url,
             location=location.strip() or None,
             is_active=True,
             is_restricted=is_restricted,
