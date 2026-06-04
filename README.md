@@ -1,8 +1,9 @@
 # SentinelVision: Smart AI CCTV Security System
 
-[![CI Pipeline](https://github.com/ahmedmustafa28/sentinel-cv-surveillance/actions/workflows/ci.yml/badge.svg)](https://github.com/ahmedmustafa28/sentinel-cv-surveillance/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/ahmedmustafa28/sentinel-cv-surveillance/graph/badge.svg?token=)](https://codecov.io/gh/ahmedmustafa28/sentinel-cv-surveillance)
+[![CI Pipeline](https://github.com/ahmedmustafa28/sentinel-vision/actions/workflows/ci.yml/badge.svg)](https://github.com/ahmedmustafa28/sentinel-vision/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/ahmedmustafa28/sentinel-vision/graph/badge.svg?token=)](https://github.com/ahmedmustafa28/sentinel-vision)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 
 SentinelVision is a smart security camera system that uses Artificial Intelligence (AI) to watch your camera streams, detect events, and keep your premises safe. 
 
