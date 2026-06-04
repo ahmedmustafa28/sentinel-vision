@@ -10,7 +10,7 @@ logger = logging.getLogger("app.services.health_service")
 settings = get_settings()
 
 
-def health_status(processor: Any = None, registry: Any = None) -> dict[str, Any]:
+def health_status(processor: Any = None, registry: Any = None, scheduler: Any = None) -> dict[str, Any]:
     """Inspects and returns system health status for cameras, models, database, and background processing."""
     status = "healthy"
     checks = {}
@@ -148,10 +148,28 @@ def health_status(processor: Any = None, registry: Any = None) -> dict[str, Any]
         "cooldowns": cooldowns_list
     }
 
+    # 6. Retention job health check
+    from app.jobs.retention_job import last_run_time as retention_last_run
+    next_run = None
+    if scheduler is not None:
+        try:
+            job = scheduler.get_job("retention_cleanup")
+            if job and job.next_run_time:
+                next_run = job.next_run_time.isoformat()
+        except Exception as exc:
+            logger.error("Failed to query scheduler for next run: %s", exc)
+
+    retention_info = {
+        "last_run": retention_last_run.isoformat() if retention_last_run else None,
+        "next_run": next_run
+    }
+    checks["retention_job"] = retention_info
+
     return {
         "status": status,
         "service": settings.app_name,
         "environment": settings.app_env,
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "retention_job": retention_info,
         "checks": checks
     }

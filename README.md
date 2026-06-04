@@ -1,5 +1,9 @@
 # SentinelVision: Smart AI CCTV Security System
 
+[![CI Pipeline](https://github.com/ahmedmustafa28/sentinel-cv-surveillance/actions/workflows/ci.yml/badge.svg)](https://github.com/ahmedmustafa28/sentinel-cv-surveillance/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/ahmedmustafa28/sentinel-cv-surveillance/graph/badge.svg?token=)](https://codecov.io/gh/ahmedmustafa28/sentinel-cv-surveillance)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 SentinelVision is a smart security camera system that uses Artificial Intelligence (AI) to watch your camera streams, detect events, and keep your premises safe. 
 
 Unlike standard security cameras, SentinelCV automatically recognizes people, tracks if important items go missing, monitors restricted areas, and sends you instant email alerts when critical events happen.
@@ -15,6 +19,17 @@ Unlike standard security cameras, SentinelCV automatically recognizes people, tr
 * **Live Video Dashboard**: A clean, modern web interface to watch live feeds, view alert histories, and toggle restricted areas.
 * **System Health Diagnostics**: A built-in health monitor page that verifies if your database, AI models, and camera streams are running correctly.
 * **Power-Saving Mode**: The system uses smart motion detection to only run heavy AI models when movement is detected, saving over 90% of computer processing power.
+
+---
+
+## 🔒 Security & System Robustness (Recent Enhancements)
+
+* **Role-Based Authentication**: Secure JWT-based login, session tracking, and logout with cookie-based and header-based token verification.
+* **Database Concurrency (WAL Mode)**: Switched SQLite to Write-Ahead Logging (WAL) and optimized database locking to support concurrent read and write operations without locks or collisions.
+* **Strict Input Validation**: Rigid camera source input validation gating out invalid schemes and private IP ranges by default (e.g., `10.x`, `172.16-31.x`, `192.168.x`) unless explicitly allowed via `ALLOW_LOCAL_RTSP=true`.
+* **Alert Rate-Limiting & Digests**: Per-camera notification cooldown thresholds (`ALERT_COOLDOWN_SECONDS`) and digest mode (`ALERT_DIGEST_MINUTES`) to batch suppressed alerts and prevent spamming.
+* **Automated Retention Cleanup**: Daily automated job at 02:00 local time to prune event snapshots and database records older than `EVENT_RETENTION_DAYS`, with a manually triggerable endpoint (`POST /admin/run-retention` gated by `X-Admin-Key`).
+* **Continuous Integration & Safety**: Full GitHub Actions CI workflow checking code style (`ruff`, `black`), running tests with a coverage threshold of $\ge 60\%$, and verifying dependencies/secrets security scans (`pip-audit` & `detect-secrets`).
 
 ---
 

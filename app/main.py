@@ -43,10 +43,14 @@ async def lifespan(app: FastAPI):
     surveillance_processor = SurveillanceProcessor(camera_registry)
     surveillance_processor.start()
 
+    from app.jobs.retention_job import start_scheduler, stop_scheduler
+    scheduler = start_scheduler()
+
     app.state.settings = settings
     app.state.templates = templates
     app.state.camera_registry = camera_registry
     app.state.surveillance_processor = surveillance_processor
+    app.state.scheduler = scheduler
 
     yield
 
@@ -54,6 +58,7 @@ async def lifespan(app: FastAPI):
     AlertThrottle().stop()
     surveillance_processor.stop()
     camera_registry.stop_all()
+    stop_scheduler()
     logger.info("Shutting down application")
 
 

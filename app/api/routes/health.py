@@ -10,7 +10,8 @@ def get_health(request: Request):
     app = request.app
     processor = getattr(app.state, "surveillance_processor", None)
     registry = getattr(app.state, "camera_registry", None)
-    return health_status(processor=processor, registry=registry)
+    scheduler = getattr(app.state, "scheduler", None)
+    return health_status(processor=processor, registry=registry, scheduler=scheduler)
 
 
 @router.get("/api/health", summary="Service health check (legacy/API)")
@@ -18,4 +19,5 @@ def get_health_api(request: Request):
     app = request.app
     processor = getattr(app.state, "surveillance_processor", None)
     registry = getattr(app.state, "camera_registry", None)
-    return health_status(processor=processor, registry=registry)
+    scheduler = getattr(app.state, "scheduler", None)
+    return health_status(processor=processor, registry=registry, scheduler=scheduler)

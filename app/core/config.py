@@ -62,6 +62,7 @@ class Settings:
     alert_cooldown_seconds: int
     alert_digest_minutes: int | None
     allow_local_rtsp: bool
+    event_retention_days: int
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -103,6 +104,7 @@ class Settings:
             alert_cooldown_seconds=_to_int(os.getenv("ALERT_COOLDOWN_SECONDS"), 60),
             alert_digest_minutes=_to_int(os.getenv("ALERT_DIGEST_MINUTES"), 0) or None,
             allow_local_rtsp=_to_bool(os.getenv("ALLOW_LOCAL_RTSP"), False),
+            event_retention_days=_to_int(os.getenv("EVENT_RETENTION_DAYS"), 30),
         )
 
     @property
